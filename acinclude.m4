@@ -75,6 +75,49 @@ dnl - set the parallel compiler environment
 )
 
 AC_DEFUN(
+  PAC_MPI_JM_LINK_CXX_FUNC,
+  [
+dnl - set local parallel compiler environments
+dnl - so input variables can be CXXFLAGS, LDFLAGS or LIBS
+    pac_MPI_JM_CXXFLAGS="$1"
+    pac_MPI_JM_LDFLAGS="$2"
+    pac_MPI_JM_LIBS="$3"
+    AC_LANG_SAVE
+    AC_LANG_CPLUSPLUS
+dnl - save the original environment
+    pac_saved_CXXFLAGS="$CXXFLAGS"
+    pac_saved_LDFLAGS="$LDFLAGS"
+    pac_saved_LIBS="$LIBS"
+dnl - set the parallel compiler environment
+    CXXFLAGS="$CXXFLAGS $pac_MPI_JM_CXXFLAGS"
+    LDFLAGS="$LDFLAGS $pac_MPI_JM_LDFLAGS"
+    LIBS="$LIBS $pac_MPI_JM_LIBS"
+    AC_TRY_LINK(
+      [
+        #include <jm.h>
+        using namespace QDP;
+      ], [
+        int argc ; char **argv ;
+        // Turn on the machine
+
+      ],
+      [pac_mpi_jm_working=yes],
+      [pac_mpi_jm_working=no]
+    )
+    CXXFLAGS="$pac_saved_CXXFLAGS"
+    LDFLAGS="$pac_saved_LDFLAGS"
+    LIBS="$pac_saved_LIBS"
+    AC_LANG_RESTORE
+    if test "X${pac_mpi_jm_working}X"="XyesX";
+    then
+       ifelse([$6],,:,[$6])
+    else
+       ifelse([$7],,:,[$7])
+    fi
+  ]
+)
+
+AC_DEFUN(
   PAC_BAGEL_WFM_LINK_CXX_FUNC,
   [
 dnl - set local parallel compiler environments
