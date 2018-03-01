@@ -343,9 +343,37 @@ AC_ARG_WITH(qmp,
     [--with-qmp=DIR], 
     [Use QMP in directory DIR]
   ), 
-  [QMP_DIR="${with_qmp}"],
-  [QMP_DIR="not_given"]
+  [qmp_enabled="yes"
+   QMP_DIR="${with_qmp}"],
+  [qmp_enabled="no"
+   QMP_DIR="not_given"]
 )
+
+AC_ARG_WITH(mpi_jm,
+  AC_HELP_STRING(
+    [--with-mpi_jm=DIR], 
+    [Use mpi_jm in directory DIR]
+  ), 
+  [mpi_jm_enabled="yes"
+   MPI_JM_DIR="${with_mpi_jm}"],
+  [mpi_jm_enabled="no"
+   MPI_JM_DIR="not_given"]
+)
+
+if test "X${mpi_jm_enabled}X" = "XyesX";
+then
+  if test "X${qmp_enabled}X" = "XyesX";
+  then
+      AC_MSG_NOTICE([ Enabling mpi_jm ${MPI_JM_DIR} on top of QMP ${QMP_DIR} ])
+      AC_DEFINE([BUILD_MPI_JM], [], [Build with the MPI_JM library])
+      AC_SUBST(MPI_JM_CXXFLAGS, "-I${MPI_JM_DIR}/include" ) 
+      AC_SUBST(MPI_JM_LDFLAGS, "-L${MPI_JM_DIR}/lib" )
+      AC_SUBST(MPI_JM_LIBS,"-ljm_worker")
+  else
+      AC_MSG_NOTICE([ Ignoring request for mpi_jm since QMP is not enabled ])
+  fi
+fi
+
 
 AC_ARG_WITH(qla,
   AC_HELP_STRING(

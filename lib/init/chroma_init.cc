@@ -7,6 +7,11 @@
 #include "init/chroma_init.h"
 #include "io/xmllog_io.h"
 
+#ifdef BUILD_MPI_JM // passes if MPI_JM and QMP are both used
+#include <qmp.h>
+#include <jm.h>
+#endif
+
 #include "qdp_init.h"
 
 #if defined(BUILD_JIT_CLOVER_TERM)
@@ -109,6 +114,12 @@ namespace Chroma
   //! Chroma initialisation routine
   void initialize(int* argc, char ***argv) 
   {
+//If QMP and MPI_JM are defined
+//  set the following QMP-defined callbacks:
+//  extern void (*QMP_post_init_callback)();
+//  extern void (*QMP_post_finalize_callback)(int, const char*);
+//end
+      
 #if defined QDPJIT_IS_QDPJITPTX || defined QDPJIT_IS_QDPJITNVVM
     if (! QDP_isInitialized())
       QDP_initialize_CUDA(argc, argv);
