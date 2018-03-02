@@ -112,8 +112,10 @@ namespace Chroma
 
 #ifdef BUILD_MPI_JM // when MPI_JM is in use,
     void jm_init_callback(){
-        int argc=0
-        char **argv = NULL;
+        int argc=1;
+        char *argv[1];
+        argv[0]= new char[7];
+        strcpy(argv[0],"chroma");
         jm_parent_handshake(&argc, &argv);
     };
     void jm_finalize_callback(int exit_code, const char* message){
