@@ -98,7 +98,10 @@ dnl - set the parallel compiler environment
         using namespace QDP;
       ], [
         int argc ; char **argv ;
-        // Turn on the machine
+        // Create the layout
+        const int foo[] = {2,2,2,2} ;
+        $4 ;
+        $5 ;
 
       ],
       [pac_mpi_jm_working=yes],
