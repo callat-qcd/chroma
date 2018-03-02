@@ -364,11 +364,36 @@ if test "X${mpi_jm_enabled}X" = "XyesX";
 then
   if test "X${qmp_enabled}X" = "XyesX";
   then
-      AC_MSG_NOTICE([ Enabling mpi_jm ${MPI_JM_DIR} on top of QMP ${QMP_DIR} ])
+      AC_MSG_NOTICE([Enabling mpi_jm ${MPI_JM_DIR}])
+      AC_MSG_NOTICE([on top of QMP   ${QMP_DIR}])
       AC_DEFINE([BUILD_MPI_JM], [], [Build with the MPI_JM library])
       AC_SUBST(MPI_JM_CXXFLAGS, "-I${MPI_JM_DIR}/include" ) 
+      AC_MSG_NOTICE([MPI_JM include flags: ${MPI_JM_CXXFLAGS}])
       AC_SUBST(MPI_JM_LDFLAGS, "-L${MPI_JM_DIR}/lib" )
+      AC_MSG_NOTICE([MPI_JM ld flags     : ${MPI_JM_LDFLAGS}])
       AC_SUBST(MPI_JM_LIBS,"-ljm_worker")
+      AC_MSG_NOTICE([MPI_JM libs         : ${MPI_JM_LIBS}])
+      
+      dnl Try to compile a mpi_jm program to check the --with options
+      dnl This function is defined in acinclude.m4
+      AC_MSG_CHECKING([if we can compile/link a simple mpi_jm program])
+      PAC_MPI_JM_LINK_CXX_FUNC(
+        ${MPI_JM_CXXFLAGS},
+        ${MPI_JM_LDFLAGS},
+        ${MPI_JM_LIBS},
+        ,
+        ,
+        [mpi_jm_link_ok=yes],
+        [mpi_jm_link_ok=no]
+      )
+      if test "X${mpi_jm_link_ok}X" = "XyesX"; 
+      then 
+        AC_MSG_RESULT(yes)
+      else 
+        AC_MSG_RESULT(no)
+        AC_MSG_ERROR([Cannot compile/link a program with mpi_jm. Use --with-mpi_jm=<dir> to select a working version.])
+      fi 
+      
   else
       AC_MSG_NOTICE([ Ignoring request for mpi_jm since QMP is not enabled ])
   fi

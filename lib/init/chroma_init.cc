@@ -110,15 +110,26 @@ namespace Chroma
   //! Set current working directory
   void setCWD(const std::string& name) {cwd = name;}
 
+#ifdef BUILD_MPI_JM // when MPI_JM is in use,
+    void jm_init_callback(){
+        int argc=0
+        char **argv = NULL;
+        jm_parent_handshake(&argc, &argv);
+    };
+    void jm_finalize_callback(int exit_code, const char* message){
+        jm_finish(exit_code, message);
+    }
+#endif
+
 
   //! Chroma initialisation routine
   void initialize(int* argc, char ***argv) 
   {
-//If QMP and MPI_JM are defined
+#ifdef BUILD_MPI_JM // when MPI_JM is in use,
 //  set the following QMP-defined callbacks:
-//  extern void (*QMP_post_init_callback)();
-//  extern void (*QMP_post_finalize_callback)(int, const char*);
-//end
+      QMP_post_initialize_callback = jm_init_callback;
+      QMP_post_finalize_callback = jm_finalize_callback;
+#endif
       
 #if defined QDPJIT_IS_QDPJITPTX || defined QDPJIT_IS_QDPJITNVVM
     if (! QDP_isInitialized())
