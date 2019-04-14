@@ -235,8 +235,6 @@ namespace Chroma
 		}
 	}
 
-	QDPIO::cout<<"Successfully updated Beta_munu(n)."<<std::endl;
-
 	END_CODE();
      }
 
