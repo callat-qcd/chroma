@@ -37,7 +37,7 @@ namespace Chroma
      *
      * The standard  gauge action as sum of Characters
      */
-    class GaugeAct : public LinearGaugeAction
+    class RMCGaugeAct : public LinearGaugeAction
     {
     public:
       // Typedefs to save typing
@@ -46,7 +46,7 @@ namespace Chroma
 
       //! General CreateGaugeState<P,Q>
       //! Read coeff from a param struct
-      GaugeAct(Handle< CreateGaugeState<P,Q> > cgs_, const Params& p) :
+      RMCGaugeAct(Handle< CreateGaugeState<P,Q> > cgs_, const Params& p) :
 	cgs(cgs_), param(p) {}
 
       //! Return the set on which the gauge action is defined
@@ -70,7 +70,7 @@ namespace Chroma
       const CreateGaugeState<P,Q>& getCreateState() const {return *cgs;}
 
       //! Update coupling coefficient Beta using RMC
-      void updateBeta(multi2d<LatticeReal>& RMCBeta, 
+      void updateBeta(/*multi2d<LatticeReal>& RMCBeta,*/ 
 		      const Handle< GaugeState<P,Q> >& state) const;
 
       //! Restore/initialize coupling coefficient Beta to original values
@@ -87,11 +87,11 @@ namespace Chroma
 
 
       //! Destructor is automatic
-      ~GaugeAct() {}
+      ~RMCGaugeAct() {}
 
     protected:
       //! Hide assignment
-      void operator=(const GaugeAct& a) {}
+      void operator=(const RMCGaugeAct& a) {}
       
       //! Compute the site-level action
       void siteAction(multi2d<LatticeColorMatrix>& site_act, 

@@ -20,7 +20,7 @@ namespace Chroma
 		   multi1d<LatticeColorMatrix> >* createGaugeAct(XMLReader& xml, 
 								 const std::string& path) 
       {
-	return new GaugeAct(CreateGaugeStateEnv::reader(xml, path), 
+	return new RMCGaugeAct(CreateGaugeStateEnv::reader(xml, path), 
 			    Params(xml, path));
       }
       
@@ -60,7 +60,7 @@ namespace Chroma
 
 
     //! Compute the action
-    Double GaugeAct::S(const Handle< GaugeState<P,Q> >& state) const
+    Double RMCGaugeAct::S(const Handle< GaugeState<P,Q> >& state) const
     {
       // Action at the site level
       multi2d<LatticeColorMatrix> plq;
@@ -90,7 +90,7 @@ namespace Chroma
  
 
     //! Compute the plaquette
-    void GaugeAct::siteAction(multi2d<LatticeColorMatrix>& plq, const Handle< GaugeState<P,Q> >& state) const
+    void RMCGaugeAct::siteAction(multi2d<LatticeColorMatrix>& plq, const Handle< GaugeState<P,Q> >& state) const
     {
       START_CODE();
 
@@ -124,7 +124,7 @@ namespace Chroma
 
     //! Compute staple
     /*! Default version. Derived class should override this if needed. */
-    void GaugeAct::staple(LatticeColorMatrix& result,
+    void RMCGaugeAct::staple(LatticeColorMatrix& result,
 			  const Handle< GaugeState<P,Q> >& state,
 			  int mu, int cb) const
     {
@@ -168,7 +168,7 @@ namespace Chroma
 
 
     //! Compute dS/dU
-    void GaugeAct::deriv(multi1d<LatticeColorMatrix>& ds_u,
+    void RMCGaugeAct::deriv(multi1d<LatticeColorMatrix>& ds_u,
 			 const Handle< GaugeState<P,Q> >& state) const
     {
       START_CODE();
@@ -213,10 +213,11 @@ namespace Chroma
 
 
      //!  Update coupling coefficient Beta using RMC
-    void GaugeAct::updateBeta(multi2d<LatticeReal>& RMCBeta, const Handle< GaugeState<P,Q> >& state) const
+    void RMCGaugeAct::updateBeta(/*multi2d<LatticeReal>& RMCBeta,*/ const Handle< GaugeState<P,Q> >& state) const
     {
 	START_CODE();
 
+	multi2d<LatticeReal> RMCBeta;
 	multi2d<LatticeColorMatrix> plq;
         this->siteAction(plq, state);
 
@@ -239,7 +240,7 @@ namespace Chroma
      }
 
      //! Restore/initialize coupling coefficient Beta to original values
-     void GaugeAct::restoreBeta(multi2d<LatticeReal>& RMCBeta) const
+     void RMCGaugeAct::restoreBeta(multi2d<LatticeReal>& RMCBeta) const
      {
 	START_CODE();
 	for (int mu=0; mu<Nd; mu++) {
@@ -252,7 +253,7 @@ namespace Chroma
      }
 
      //! Compute the RMC Action
-     Double GaugeAct::RMC_S(multi2d<LatticeReal>& RMCBeta, const Handle< GaugeState<P,Q> >& state) const
+     Double RMCGaugeAct::RMC_S(multi2d<LatticeReal>& RMCBeta, const Handle< GaugeState<P,Q> >& state) const
      {
 	START_CODE();
 	
@@ -283,7 +284,7 @@ namespace Chroma
       }
 
   //! Compute dS_{RMC}/dU
-  void GaugeAct::RMC_deriv(multi2d<LatticeReal>& RMCBeta, multi1d<LatticeColorMatrix> & ds_u, const Handle< GaugeState<P,Q> >& state) const
+  void RMCGaugeAct::RMC_deriv(multi2d<LatticeReal>& RMCBeta, multi1d<LatticeColorMatrix> & ds_u, const Handle< GaugeState<P,Q> >& state) const
       {
 	START_CODE();
 
