@@ -29,6 +29,7 @@ namespace Chroma
 
       Real  beta;   // Original coupling constant
       Real  alpha;   // New coupling constant for RMC
+      multi2d<LatticeReal> RMCBeta; //RMC coupling constant 
     };
   
 
@@ -71,19 +72,19 @@ namespace Chroma
 
       //! Update coupling coefficient Beta using RMC
       void updateBeta(/*multi2d<LatticeReal>& RMCBeta,*/ 
-		      const Handle< GaugeState<P,Q> >& state) const;
+		      const Handle< GaugeState<P,Q> >& state);
 
       //! Restore/initialize coupling coefficient Beta to original values
-      void restoreBeta(multi2d<LatticeReal>& RMCBeta) const;
+      void restoreBeta(/*multi2d<LatticeReal>& RMCBeta*/);
 
       //! Compute the RMC Action
-      Double RMC_S(multi2d<LatticeReal>& RMCBeta,
-		      const Handle< GaugeState<P,Q> >& state) const;
+      Double RMC_S(/*multi2d<LatticeReal>& RMCBeta,*/
+		      const Handle< GaugeState<P,Q> >& state);
 
       //! Compute dS_{RMC}/dU
-      void RMC_deriv(multi2d<LatticeReal> & RMCBeta,
+      void RMC_deriv(/*multi2d<LatticeReal> & RMCBeta,*/
 		      multi1d<LatticeColorMatrix>& result,
-		      const Handle< GaugeState<P,Q> >& state) const;
+		      const Handle< GaugeState<P,Q> >& state);
 
 
       //! Destructor is automatic

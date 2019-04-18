@@ -213,11 +213,10 @@ namespace Chroma
 
 
      //!  Update coupling coefficient Beta using RMC
-    void RMCGaugeAct::updateBeta(/*multi2d<LatticeReal>& RMCBeta,*/ const Handle< GaugeState<P,Q> >& state) const
+    void RMCGaugeAct::updateBeta(/*multi2d<LatticeReal>& RMCBeta,*/ const Handle< GaugeState<P,Q> >& state)
     {
 	START_CODE();
 
-	multi2d<LatticeReal> RMCBeta;
 	multi2d<LatticeColorMatrix> plq;
         this->siteAction(plq, state);
 
@@ -232,7 +231,7 @@ namespace Chroma
 			LatticeReal rnd_num;
 			random(rnd_num);
 			LatticeReal rnd_prob = exp((param.beta-param.alpha)*plaq-M);
-			RMCBeta[mu][nu] = where(rnd_num < rnd_prob,param.alpha,param.beta);
+			param.RMCBeta[mu][nu] = where(rnd_num < rnd_prob,param.alpha,param.beta);
 		}
 	}
 
@@ -240,12 +239,12 @@ namespace Chroma
      }
 
      //! Restore/initialize coupling coefficient Beta to original values
-     void RMCGaugeAct::restoreBeta(multi2d<LatticeReal>& RMCBeta) const
+     void RMCGaugeAct::restoreBeta() 
      {
 	START_CODE();
 	for (int mu=0; mu<Nd; mu++) {
 		for(int nu=mu+1;nu<Nd;nu++) {
-			RMCBeta[mu][nu] = param.beta;
+			param.RMCBeta[mu][nu] = param.beta;
 		}
 	}
 	END_CODE();
@@ -253,7 +252,7 @@ namespace Chroma
      }
 
      //! Compute the RMC Action
-     Double RMCGaugeAct::RMC_S(multi2d<LatticeReal>& RMCBeta, const Handle< GaugeState<P,Q> >& state) const
+     Double RMCGaugeAct::RMC_S(const Handle< GaugeState<P,Q> >& state)
      {
 	START_CODE();
 	
@@ -271,7 +270,7 @@ namespace Chroma
  	for (int mu=0; mu<Nd; mu++) {
 		for (int nu=mu+1; nu<Nd; nu++) {
 			LatticeReal plaq=three-real(trace(plq[mu][nu]));
-			s_pg += sum(RMCBeta[mu][nu]*plaq - (RMCBeta[mu][nu]-param.alpha)/(param.beta-param.alpha)*
+			s_pg += sum(param.RMCBeta[mu][nu]*plaq - (param.RMCBeta[mu][nu]-param.alpha)/(param.beta-param.alpha)*
 				log(Double(1)-exp((param.beta-param.alpha)*plaq-M)));
 		}
 	}
@@ -284,7 +283,7 @@ namespace Chroma
       }
 
   //! Compute dS_{RMC}/dU
-  void RMCGaugeAct::RMC_deriv(multi2d<LatticeReal>& RMCBeta, multi1d<LatticeColorMatrix> & ds_u, const Handle< GaugeState<P,Q> >& state) const
+  void RMCGaugeAct::RMC_deriv(multi1d<LatticeColorMatrix> & ds_u, const Handle< GaugeState<P,Q> >& state)
       {
 	START_CODE();
 
@@ -316,7 +315,7 @@ namespace Chroma
 
 	  		LatticeColorMatrix ds_A = (up_plq + down_plq)/Double(2);				
 			
-			ds_u[mu] += RMCBeta[mu][nu]*ds_orig - (RMCBeta[mu][nu]-param.alpha)/(param.beta-param.alpha)*
+			ds_u[mu] += param.RMCBeta[mu][nu]*ds_orig - (param.RMCBeta[mu][nu]-param.alpha)/(param.beta-param.alpha)*
 				(param.alpha-param.beta)/(exp((param.beta-param.alpha)*plaq-M)-Double(1))*ds_A;
 		}
 		ds_u[mu] *= Double(-1)/Double(Nc);
