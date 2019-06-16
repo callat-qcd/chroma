@@ -17,8 +17,8 @@
 
 #include "update/molecdyn/monomial/abs_monomial.h"
 #include "update/molecdyn/monomial/monomial_factory.h"
-#include "update/molecdyn/monomial/gauge_monomial.h"
 #include "update/molecdyn/monomial/const_gauge_monomial.h"
+#include "update/molecdyn/monomial/rmc_gauge_monomial.h"
 
 #include "update/molecdyn/monomial/remez.h"
 #include "update/molecdyn/monomial/remez_coeff.h"

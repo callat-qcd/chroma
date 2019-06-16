@@ -67,7 +67,7 @@ namespace Chroma
       // Make a gauge connect state
       Handle< GaugeState<P,Q> > g_state(getGaugeAct().createState(s.getQ()));
 
-      getGaugeAct().deriv(F, g_state);
+      gaugeact->RMC_deriv(F,g_state);
 
       monitorForces(xml_out, "Forces", F);
       pop(xml_out);
@@ -85,8 +85,9 @@ namespace Chroma
       push(xml_out, "RMCGaugeMonomial");
 
       Handle< GaugeState<P,Q> > g_state(getGaugeAct().createState(s.getQ()));
-      Double action = getGaugeAct().S(g_state);
-
+ 
+      Double action = gaugeact -> RMC_S(g_state);
+   
       write(xml_out, "S", action);
       pop(xml_out);
 
@@ -99,8 +100,9 @@ namespace Chroma
     void refreshInternalFields(const AbsFieldState<P,Q>& s)
     {
       //No internal fields to refresh => Nop
-      //RMCGaugeActEnv::updateBeta();
+    
       Handle< GaugeState<P,Q> > g_state(getGaugeAct().createState(s.getQ()));
+      
       gaugeact->updateBeta(g_state);
       /*RMCGaugeActEnv::GaugeAct downcast=dynamic_cast<GaugeAction<P,Q>*>(&gaugeact);
 

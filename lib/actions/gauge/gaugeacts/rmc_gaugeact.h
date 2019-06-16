@@ -6,6 +6,7 @@
 #ifndef __rmc_gaugeact_h__
 #define __rmc_gaugeact_h__
 
+#include "chromabase.h"
 #include "gaugeact.h"
 #include "gaugebc.h"
 
@@ -29,14 +30,15 @@ namespace Chroma
 
       Real  beta;   // Original coupling constant
       Real  alpha;   // New coupling constant for RMC
-      multi2d<LatticeReal> RMCBeta; //RMC coupling constant 
+      mutable multi2d<LatticeReal> RMCBeta{Nd,Nd}; //RMC coupling constant 
+
     };
   
 
-    //! Character  gauge action
+    //! RMC gauge action
     /*! \ingroup gaugeacts
      *
-     * The standard  gauge action as sum of Characters
+     * The gauge action with Reverse Monte Carlo
      */
     class RMCGaugeAct : public LinearGaugeAction
     {
@@ -71,20 +73,18 @@ namespace Chroma
       const CreateGaugeState<P,Q>& getCreateState() const {return *cgs;}
 
       //! Update coupling coefficient Beta using RMC
-      void updateBeta(/*multi2d<LatticeReal>& RMCBeta,*/ 
-		      const Handle< GaugeState<P,Q> >& state);
+      void updateBeta(const Handle< GaugeState<P,Q> >& state) const;
 
       //! Restore/initialize coupling coefficient Beta to original values
-      void restoreBeta(/*multi2d<LatticeReal>& RMCBeta*/);
+      void restoreBeta() const;
 
       //! Compute the RMC Action
       Double RMC_S(/*multi2d<LatticeReal>& RMCBeta,*/
-		      const Handle< GaugeState<P,Q> >& state);
+		      const Handle< GaugeState<P,Q> >& state) const;
 
       //! Compute dS_{RMC}/dU
-      void RMC_deriv(/*multi2d<LatticeReal> & RMCBeta,*/
-		      multi1d<LatticeColorMatrix>& result,
-		      const Handle< GaugeState<P,Q> >& state);
+      void RMC_deriv(multi1d<LatticeColorMatrix>& result,
+		      const Handle< GaugeState<P,Q> >& state) const;
 
 
       //! Destructor is automatic

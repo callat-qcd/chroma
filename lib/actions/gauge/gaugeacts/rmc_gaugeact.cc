@@ -51,11 +51,19 @@ namespace Chroma
       {	
 	read(paramtop, "beta", beta);
 	read(paramtop, "alpha", alpha);
+	for (int mu=1; mu<Nd; ++mu) {
+		for(int nu=0;nu<mu;++nu) {
+			RMCBeta[mu][nu] = beta;
+			RMCBeta[nu][mu] = beta;
+		}
+	}
+
       }
       catch( const std::string& e ) { 
 	QDPIO::cerr << "Error reading XML: " <<  e << std::endl;
 	QDP_abort(1);
       }
+
     }
 
 
@@ -77,8 +85,7 @@ namespace Chroma
 	{
 	  LatticeComplex plaq=trace(plq[mu][nu]);
 	  // Sum over plaquettes
-	  act_F += sum(real(plaq)-three);	
-	  
+	  act_F += sum(real(plaq)-three);		 
 	}
       }
 
@@ -107,16 +114,12 @@ namespace Chroma
       {
 	for(int nu=0; nu < mu; ++nu)
 	{
-	  /* tmp_0 = u(x+mu,nu)*u_dag(x+nu,mu) */
-	  /* tmp_1 = tmp_0*u_dag(x,nu)=u(x+mu,nu)*u_dag(x+nu,mu)*u_dag(x,nu) */
-	  /* wplaq_tmp = tr(u(x,mu)*tmp_1=u(x,mu)*u(x+mu,nu)*u_dag(x+nu,mu)*u_dag(x,nu)) */
 	  plq[mu][nu] += (u[mu]*shift(u[nu],FORWARD,mu)*adj(shift(u[mu],FORWARD,nu))*adj(u[nu])) ; 
-	  
+
 	  // Keep a copy
 	  plq[nu][mu] = plq[mu][nu];
 	}
       }
-
 
       END_CODE();
     }
@@ -146,13 +149,13 @@ namespace Chroma
       tmp1[rb[cb]] = u_nu_mu * adj(shift(u[mu],FORWARD,nu));
       tmp2[rb[cb]] = tmp1 * adj(u[nu]);
 
-      result[rb[cb]] += param.beta * tmp2;
+      result[rb[cb]] += param.RMCBeta[mu][nu] * tmp2;
 
       // +backward staple
       tmp1[rb[cb]] = adj(shift(u_nu_mu,BACKWARD,nu)) * adj(shift(u[mu],BACKWARD,nu));
       tmp2[rb[cb]] = tmp1 * shift(u[nu],BACKWARD,nu);
 
-      result[rb[cb]] += param.beta * tmp2;
+      result[rb[cb]] += param.RMCBeta[mu][nu] * tmp2;
     }
 
     // NOTE: a heatbath code should be responsible for resetting links on
@@ -213,38 +216,50 @@ namespace Chroma
 
 
      //!  Update coupling coefficient Beta using RMC
-    void RMCGaugeAct::updateBeta(/*multi2d<LatticeReal>& RMCBeta,*/ const Handle< GaugeState<P,Q> >& state)
+    void RMCGaugeAct::updateBeta(const Handle< GaugeState<P,Q> >& state) const
     {
 	START_CODE();
-
+	
 	multi2d<LatticeColorMatrix> plq;
         this->siteAction(plq, state);
 
 	const multi1d<LatticeColorMatrix>& u = state->getLinks();
-	Double M = (param.beta - param.alpha) * 1.5;
+	
+	Double M = Double(4.5); //maximum of the action density
 
 	Double three = Nc; 
-
-	for (int mu=0; mu<Nd; mu++) {
-		for (int nu=mu+1; nu<Nd; nu++) {
-			LatticeReal plaq=three-real(trace(plq[mu][nu]));
-			LatticeReal rnd_num;
+	
+	//save the seed if need be
+//	QDP::Seed bkup;
+//	QDP::RNG::savern(bkup);
+	for (int mu=1; mu<Nd; ++mu){
+		for (int nu=0; nu<mu; ++nu) {
+			LatticeReal plaq = three-real(trace(plq[mu][nu])); //calculate action density
+			
+			LatticeReal rnd_num; //fill lattice with random numbers
 			random(rnd_num);
-			LatticeReal rnd_prob = exp((param.beta-param.alpha)*plaq-M);
-			param.RMCBeta[mu][nu] = where(rnd_num < rnd_prob,param.alpha,param.beta);
-		}
-	}
+			
+			//calculate RMC switching probability
+			LatticeReal rnd_prob = exp((param.beta-param.alpha)/Double(Nc)*(plaq-M));
 
+			//set coupling to alpha if condition satisfied 
+			param.RMCBeta[mu][nu] = where(rnd_num <= rnd_prob,param.alpha,param.beta);
+			param.RMCBeta[nu][mu] = param.RMCBeta[mu][nu]; 
+		}
+	}			
+//	QDP::RNG::setrn(bkup);
 	END_CODE();
      }
 
      //! Restore/initialize coupling coefficient Beta to original values
-     void RMCGaugeAct::restoreBeta() 
+     void RMCGaugeAct::restoreBeta() const
      {
 	START_CODE();
 	for (int mu=0; mu<Nd; mu++) {
-		for(int nu=mu+1;nu<Nd;nu++) {
+		for(int nu=0; nu<Nd; nu++) {
+			if(mu == nu) continue;
 			param.RMCBeta[mu][nu] = param.beta;
+			param.RMCBeta[nu][mu] = param.beta;
 		}
 	}
 	END_CODE();
@@ -252,30 +267,35 @@ namespace Chroma
      }
 
      //! Compute the RMC Action
-     Double RMCGaugeAct::RMC_S(const Handle< GaugeState<P,Q> >& state)
+     Double RMCGaugeAct::RMC_S(const Handle< GaugeState<P,Q> >& state) const
      {
 	START_CODE();
-	
+
 	multi2d<LatticeColorMatrix> plq;
         this->siteAction(plq, state);
 
 	Double s_pg = zero;
 
-	const multi1d<LatticeColorMatrix>& u = state->getLinks();
-
-	Double M = (param.beta - param.alpha) * 1.5;
+	Double M = Double(4.5);
 
 	Double three = Nc; 
-
- 	for (int mu=0; mu<Nd; mu++) {
-		for (int nu=mu+1; nu<Nd; nu++) {
+	
+ 	for(int mu=1; mu < Nd; ++mu) {
+		for(int nu=0; nu < mu; ++nu) {
+			
 			LatticeReal plaq=three-real(trace(plq[mu][nu]));
-			s_pg += sum(param.RMCBeta[mu][nu]*plaq - (param.RMCBeta[mu][nu]-param.alpha)/(param.beta-param.alpha)*
-				log(Double(1)-exp((param.beta-param.alpha)*plaq-M)));
-		}
-	}
+			
+			LatticeReal exp_term =exp((param.beta-param.alpha)/Double(Nc)*(plaq-M));
+		
+			LatticeReal log_term = where(param.RMCBeta[mu][nu]==param.beta, log(Real(1.0)-exp_term), Real(zero));
 
-	s_pg *= Double(-1)/Double(Nc);
+			LatticeReal old_s = (param.RMCBeta[mu][nu]/Real(Nc))*plaq;
+
+			s_pg += sum(old_s - log_term);
+			
+		}
+
+	}	
 
 	END_CODE();
 
@@ -283,13 +303,12 @@ namespace Chroma
       }
 
   //! Compute dS_{RMC}/dU
-  void RMCGaugeAct::RMC_deriv(multi1d<LatticeColorMatrix> & ds_u, const Handle< GaugeState<P,Q> >& state)
+  void RMCGaugeAct::RMC_deriv(multi1d<LatticeColorMatrix> & ds_u, const Handle< GaugeState<P,Q> >& state) const 
       {
 	START_CODE();
 
 	multi2d<LatticeColorMatrix> plq;
         this->siteAction(plq, state);
-
 
     	ds_u.resize(Nd);
 
@@ -297,29 +316,39 @@ namespace Chroma
 
         const multi1d<LatticeColorMatrix>& u = state->getLinks();
       
-	Double M = (param.beta - param.alpha) * 1.5;
+	Double M = Double(4.5);
 
 	Double three = Nc; 
 
 	for (int mu=0; mu<Nd; mu++) {
-		for (int nu=mu+1; nu<Nd; nu++) {
-			LatticeColorMatrix ds_orig = Real(1.0)-plq[mu][nu];
-			
-			LatticeReal plaq=three-real(trace(plq[mu][nu]));
+		for (int nu=0; nu<Nd; nu++) {
+
+			if (mu == nu) continue;
 			
 			LatticeColorMatrix tmp_1 = shift(u[nu], FORWARD, mu);
 	  		LatticeColorMatrix tmp_2 = shift(u[mu], FORWARD, nu);
 
-	  		LatticeColorMatrix up_plq   = u[mu]*tmp_1*adj(tmp_2)*adj(u[nu]);
-	 		LatticeColorMatrix down_plq = u[mu]*shift(adj(tmp_1)*adj(u[mu])*u[nu],BACKWARD,nu);
-
-	  		LatticeColorMatrix ds_A = (up_plq + down_plq)/Double(2);				
+			LatticeColorMatrix up_plaq =  u[mu]*tmp_1*adj(tmp_2)*adj(u[nu]);
+			LatticeColorMatrix down_plaq = u[mu]*shift(adj(tmp_1)*adj(u[mu])*u[nu],BACKWARD,nu);
 			
-			ds_u[mu] += param.RMCBeta[mu][nu]*ds_orig - (param.RMCBeta[mu][nu]-param.alpha)/(param.beta-param.alpha)*
-				(param.alpha-param.beta)/(exp((param.beta-param.alpha)*plaq-M)-Double(1))*ds_A;
+			LatticeColorMatrix up_plaq_beta =  param.RMCBeta[mu][nu] * u[mu]*tmp_1*adj(tmp_2)*adj(u[nu]);
+			LatticeColorMatrix down_plaq_beta = u[mu]*shift(adj(tmp_1)*adj(u[mu])*u[nu]*param.RMCBeta[mu][nu],BACKWARD,nu);
+	  		LatticeColorMatrix ds_orig = -Real(1.0)/(Real(2*Nc))*(up_plaq_beta + down_plaq_beta);				
+			LatticeReal up_plaq_tr = three-real(trace(up_plaq));
+			LatticeReal down_plaq_tr = three-real(trace(down_plaq));
+
+			LatticeReal exp_term_up = exp((param.beta-param.alpha)/Double(Nc)*(up_plaq_tr-M));
+			LatticeReal exp_term_down = exp((param.beta-param.alpha)/Double(Nc)*(down_plaq_tr-M));
+
+			LatticeColorMatrix ds_log_up = where(param.RMCBeta[mu][nu] == param.beta, (param.beta-param.alpha)*exp_term_up/(exp_term_up-Real(1.0)) * -up_plaq/(Real(2*Nc)), ColorMatrix(zero));
+			LatticeColorMatrix ds_log_down = where(shift(param.RMCBeta[mu][nu],BACKWARD,nu) == param.beta, (param.beta-param.alpha)*exp_term_down/(exp_term_down-Real(1.0)) * -down_plaq/(Real(2*Nc)), ColorMatrix(zero));
+
+			ds_u[mu] += ds_orig - ds_log_up - ds_log_down;
+
 		}
-		ds_u[mu] *= Double(-1)/Double(Nc);
-	}
+
+	} 
+
 	// Zero the force on any fixed boundaries
    	getGaugeBC().zero(ds_u);	
 	
