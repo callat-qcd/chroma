@@ -31,6 +31,9 @@ namespace Chroma
       Real  beta;   // Original coupling constant
       Real  alpha;   // New coupling constant for RMC
       mutable multi2d<LatticeReal> RMCBeta{Nd,Nd}; //RMC coupling constant 
+      mutable int curr_num; //Current Update Number
+      int freeze_steps; //Number of Markovian steps that RMCBeta is frozen
+      bool freeze_check; //Check if freezing is turned on or not
 
     };
   

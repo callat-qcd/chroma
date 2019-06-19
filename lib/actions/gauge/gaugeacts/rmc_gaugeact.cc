@@ -57,6 +57,9 @@ namespace Chroma
 			RMCBeta[nu][mu] = beta;
 		}
 	}
+	curr_num = 0;
+	read(paramtop, "freeze_steps", freeze_steps);
+	read(paramtop, "freeze_check", freeze_check);
 
       }
       catch( const std::string& e ) { 
@@ -232,22 +235,28 @@ namespace Chroma
 	//save the seed if need be
 //	QDP::Seed bkup;
 //	QDP::RNG::savern(bkup);
-	for (int mu=1; mu<Nd; ++mu){
-		for (int nu=0; nu<mu; ++nu) {
-			LatticeReal plaq = three-real(trace(plq[mu][nu])); //calculate action density
+	if((param.curr_num % param.freeze_steps == 0 && param.freeze_check) || !param.freeze_check) { //if freezing is turned on and param.freeze_steps have been taken from the last update or the freezing is turned off, perform the update
+		for (int mu=1; mu<Nd; ++mu){
+			for (int nu=0; nu<mu; ++nu) {
+				LatticeReal plaq = three-real(trace(plq[mu][nu])); //calculate action density
 			
-			LatticeReal rnd_num; //fill lattice with random numbers
-			random(rnd_num);
+				LatticeReal rnd_num; //fill lattice with random numbers
+				random(rnd_num);
 			
-			//calculate RMC switching probability
-			LatticeReal rnd_prob = exp((param.beta-param.alpha)/Double(Nc)*(plaq-M));
+				//calculate RMC switching probability
+				LatticeReal rnd_prob = exp((param.beta-param.alpha)/Double(Nc)*(plaq-M));
 
-			//set coupling to alpha if condition satisfied 
-			param.RMCBeta[mu][nu] = where(rnd_num <= rnd_prob,param.alpha,param.beta);
-			param.RMCBeta[nu][mu] = param.RMCBeta[mu][nu]; 
-		}
-	}			
+				//set coupling to alpha if condition satisfied 
+				param.RMCBeta[mu][nu] = where(rnd_num <= rnd_prob,param.alpha,param.beta);
+				param.RMCBeta[nu][mu] = param.RMCBeta[mu][nu]; 
+
+			}
+		}	
+	}
 //	QDP::RNG::setrn(bkup);
+
+	param.curr_num++; //reflect the current update number
+
 	END_CODE();
      }
 

@@ -99,11 +99,12 @@ namespace Chroma
 	
     void refreshInternalFields(const AbsFieldState<P,Q>& s)
     {
+ 
       //No internal fields to refresh => Nop
-    
+
       Handle< GaugeState<P,Q> > g_state(getGaugeAct().createState(s.getQ()));
-      
       gaugeact->updateBeta(g_state);
+
       /*RMCGaugeActEnv::GaugeAct downcast=dynamic_cast<GaugeAction<P,Q>*>(&gaugeact);
 
       
