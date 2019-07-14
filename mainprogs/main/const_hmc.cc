@@ -667,6 +667,9 @@ namespace Chroma
 
     // RMC Gauge Monomials
     foo &= RMCGaugeMonomialEnv::registerAll();
+
+    // RMC Coupled Gauge Monomials
+    foo &= RMCCoupledGaugeMonomialEnv::registerAll();
     
     // Ferm Monomials
     foo &= WilsonTypeFermMonomialAggregrateEnv::registerAll();

@@ -147,6 +147,7 @@ nobase_include_HEADERS = \
 	actions/gauge/gaugeacts/gaugeacts_aggregate.h \
 	actions/gauge/gaugeacts/gaugeact_factory.h \
 	actions/gauge/gaugeacts/rmc_gaugeact.h \
+	actions/gauge/gaugeacts/rmc_coupled_gaugeact.h \
 	actions/gauge/gaugeacts/plaq_gaugeact.h \
 	actions/gauge/gaugeacts/rect_gaugeact.h \
 	actions/gauge/gaugeacts/pg_gaugeact.h \
@@ -413,6 +414,7 @@ nobase_include_HEADERS = \
 	update/molecdyn/monomial/monomial_factory.h \
 	update/molecdyn/monomial/gauge_monomial.h \
 	update/molecdyn/monomial/rmc_gauge_monomial.h \
+	update/molecdyn/monomial/rmc_coupled_gauge_monomial.h \
 	update/molecdyn/monomial/const_gauge_monomial.h \
 	update/molecdyn/monomial/force_monitors.h \
 	update/molecdyn/monomial/bigfloat.h \
@@ -1135,6 +1137,7 @@ libchroma_a_SOURCES = \
 	actions/ferm/qprop/hisq_qprop.cc \
 	actions/gauge/gaugeacts/gaugeacts_aggregate.cc \
 	actions/gauge/gaugeacts/rmc_gaugeact.cc \
+	actions/gauge/gaugeacts/rmc_coupled_gaugeact.cc \
 	actions/gauge/gaugeacts/plaq_gaugeact.cc \
 	actions/gauge/gaugeacts/rect_gaugeact.cc \
 	actions/gauge/gaugeacts/pg_gaugeact.cc \
@@ -1332,6 +1335,7 @@ libchroma_a_SOURCES = \
 	update/molecdyn/hamiltonian/exact_hamiltonian.cc \
 	update/molecdyn/monomial/gauge_monomial.cc \
 	update/molecdyn/monomial/rmc_gauge_monomial.cc \
+	update/molecdyn/monomial/rmc_coupled_gauge_monomial.cc \
 	update/molecdyn/monomial/const_gauge_monomial.cc \
 	update/molecdyn/monomial/force_monitors.cc \
 	update/molecdyn/monomial/rat_approx_aggregate.cc \
