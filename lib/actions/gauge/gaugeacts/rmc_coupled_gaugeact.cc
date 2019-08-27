@@ -263,8 +263,7 @@ namespace Chroma
      //!  Update coupling coefficient Gamma using RMC
     void RMCCoupledGaugeAct::updateGamma(const Handle< GaugeState<P,Q> >& state) const
     {
-	START_CODE();
-	
+	START_CODE();	
 	//save the seed if need be
 //	QDP::Seed bkup;
 //	QDP::RNG::savern(bkup);
@@ -289,7 +288,7 @@ namespace Chroma
 
 		const multi1d<LatticeColorMatrix>& u = state->getLinks();
 	
-		Double M = Double(20.25); //maximum of the action density
+		Double M = Double(0.0); //since gamma is defined to be positive, maximum of (0-gamma*A_1*A_2) must be 0.
 
 		Double three = Nc; 
 
@@ -307,12 +306,10 @@ namespace Chroma
 				//set coupling to gamma if condition satisfied 
 				param.RMCGamma[mu][nu] = where(rnd_num <= rnd_prob,param.gamma,Real(zero));
 				param.RMCGamma[nu][mu] = param.RMCGamma[mu][nu]; 
-				
 			}
 		}	
 	}
 //	QDP::RNG::setrn(bkup);
-
 	param.curr_num++; //reflect the current update number
 
 	END_CODE();
@@ -337,7 +334,7 @@ namespace Chroma
 
 	Double s_pg = zero;
 
-	Double M = Double(20.25);
+	Double M = Double(0.0);
 
 	Double three = Nc; 
 	
@@ -378,7 +375,7 @@ namespace Chroma
 
         const multi1d<LatticeColorMatrix>& u = state->getLinks();
       
-	Double M = Double(20.25);
+	Double M = Double(0.0);
 
 	Double three = Nc; 
 
