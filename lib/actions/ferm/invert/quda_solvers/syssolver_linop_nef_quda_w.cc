@@ -17,6 +17,8 @@
 #include <quda.h>
 // #include <util_quda.h>
 
+//#include <csignal>
+
 namespace Chroma
 {
     namespace LinOpSysSolverQUDANEFEnv
@@ -56,7 +58,11 @@ namespace Chroma
 
     SystemSolverResults_t LinOpSysSolverQUDANEF::qudaInvert(const multi1d<T>& chi_s, multi1d<T>& psi_s) const
     {
-        SystemSolverResults_t ret;
+	double total_time;
+	StopWatch total_timer;
+	total_timer.start();
+        
+	SystemSolverResults_t ret;
 
         //size of field to copy. it is only half the field, since preconditioning is running
         const multi1d<int>& latdims = Layout::subgridLattSize();
@@ -133,7 +139,14 @@ namespace Chroma
 
         ret.n_count =quda_inv_param.iter;
 
-        return ret;
+	total_timer.stop();
+	total_time = total_timer.getTimeInSeconds();
+	QDPIO::cout << "QUDA INVERT TOTAL TIME CC FILE: " << total_time << " seconds" << std::endl;
+      
+	// Generate an interrupt
+	// ASG: For manually forcing breakpoint.
+	//std::raise(SIGINT);
+	return ret;
 
     }
 

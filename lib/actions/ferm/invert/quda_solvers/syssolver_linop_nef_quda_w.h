@@ -305,7 +305,9 @@ namespace Chroma
       quda_inv_param.reliable_delta = toDouble(invParam.Delta);
 
       // Solution type
-      quda_inv_param.solution_type = QUDA_MATPC_SOLUTION;
+      //quda_inv_param.solution_type = QUDA_MATPC_SOLUTION;
+      //ASG: Testing doing all the preconditiong in quda.
+      quda_inv_param.solution_type = QUDA_MAT_SOLUTION;
 
       // Solve type, only CG-types supported so far:
       switch( invParam.solverType ) {
@@ -316,7 +318,7 @@ namespace Chroma
         }
     else {
           QDPIO::cout << "Doing CGNE solve" << std::endl;
-  	  quda_inv_param.solve_type = QUDA_NORMERR_PC_SOLVE;
+          quda_inv_param.solve_type = QUDA_NORMERR_PC_SOLVE;
         }
 
     break;

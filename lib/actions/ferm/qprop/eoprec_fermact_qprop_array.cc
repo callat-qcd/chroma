@@ -148,8 +148,16 @@ namespace Chroma
 							       const multi1d<LatticeFermion>& chi) const
   {
     START_CODE();
+    
+    double lost_time;
+    StopWatch lost_timer;
+    lost_timer.start();
 
     const int N5 = size();
+    
+    double eo_time;
+    StopWatch eo_timer;
+    eo_timer.start();
   
     if (psi.size() != size() && chi.size() != size())
       QDP_error_exit("PrecFA5DQprop: sizes wrong");
@@ -164,16 +172,28 @@ namespace Chroma
       A->evenEvenInvLinOp(tmp1, chi, PLUS);
       A->oddEvenLinOp(tmp2, tmp1, PLUS);
       for(int n=0; n < N5; ++n)
-	chi_tmp[n][rb[1]] = chi[n] - tmp2[n];
+        chi_tmp[n][rb[1]] = chi[n] - tmp2[n];
     }
+    eo_timer.stop();
+    eo_time = eo_timer.getTimeInSeconds();
+    QDPIO::cout << "PRE-SOLVE SCHUR COMPLEMENT: fermact_qprop_array = " << eo_time << " seconds" << std::endl;
 
     // Call inverter
     // psi = M^(-1) psi
+    double invert_time;
+    StopWatch invert_timer;
+    invert_timer.start();
     SystemSolverResults_t res = (*invA)(psi, chi_tmp);
+    invert_timer.stop();
+    invert_time = invert_timer.getTimeInSeconds();
+    QDPIO::cout << "INVERTER TIMER inside fermact_qprop_array = " << invert_time << " seconds" << std::endl;
   
     /* Step (ii) */
     /* psi_e = A_ee^-1 * [chi_e  -  D_eo * psi_o] */
  
+    double schur_time;
+    StopWatch schur_timer;
+    schur_timer.start();
     {
       multi1d<LatticeFermion> tmp1(N5);
       multi1d<LatticeFermion> tmp2(N5);
@@ -187,14 +207,27 @@ namespace Chroma
       A->evenEvenInvLinOp(psi, tmp2, PLUS);
       
     }
+    schur_timer.stop();
+    schur_time = schur_timer.getTimeInSeconds();
+    QDPIO::cout << "POST-SOLVE SCHUR COMPLEMENT: fermact_qprop_array = " << schur_time << " seconds" << std::endl;
     
     // Compute residual
+    double resid_time;
+    StopWatch resid_timer;
+    resid_timer.start();
     {
       multi1d<LatticeFermion>  r(N5);
       A->unprecLinOp(r, psi, PLUS);
       r -= chi;
       res.resid = sqrt(norm2(r));
     }
+    resid_timer.stop();
+    resid_time = resid_timer.getTimeInSeconds();
+    QDPIO::cout << "RESIDUAL: fermact_qprop_array = " << resid_time << " seconds" << std::endl;
+    
+    lost_timer.stop();
+    lost_time = lost_timer.getTimeInSeconds();
+    QDPIO::cout << "TOTAL TIME: eoprec_fermact_qprop_array = " << lost_time << " seconds" << std::endl;
 
     END_CODE();
 

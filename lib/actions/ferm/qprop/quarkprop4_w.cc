@@ -40,6 +40,10 @@ namespace Chroma
 
     QDPIO::cout << "Entering quarkProp4" << std::endl;
     push(xml_out, "QuarkProp4");
+    
+    StopWatch total_quarkProp4;
+    double lost_time;
+    total_quarkProp4.start();
 
     ncg_had = 0;
 
@@ -71,6 +75,10 @@ namespace Chroma
     {
       for(int spin_source = start_spin; spin_source < end_spin; ++spin_source)
       {
+        //ASG: time specific iterations of the quarkprop wrapper to solve.
+	StopWatch invert_quarkProp4;
+	double lost_time_invert;
+	invert_quarkProp4.start();
 	LatticeFermion psi = zero;  // note this is ``zero'' and not 0
 	LatticeFermion chi;
 
@@ -93,7 +101,16 @@ namespace Chroma
 
 	// Compute the propagator for given source color/spin.
 	{
+	  StopWatch solver_quarkProp4;
+	  double lost_time_solver;
+	  solver_quarkProp4.start();
+	  
 	  SystemSolverResults_t result = (*qprop)(psi,chi);
+	  
+	  solver_quarkProp4.stop();
+	  lost_time_solver = solver_quarkProp4.getTimeInSeconds();
+	  QDPIO::cout << "SINGLE SOLVE TIME: quarkProp4 = " << lost_time_solver << " seconds" << std::endl;
+	  
 	  ncg_had += result.n_count;
 
 	  push(xml_out,"Qprop");
@@ -113,6 +130,10 @@ namespace Chroma
 	 * of quark propagator.
 	 */
 	FermToProp(psi, q_sol, color_source, spin_source);
+        
+        invert_quarkProp4.stop();
+        lost_time_invert = invert_quarkProp4.getTimeInSeconds();
+        QDPIO::cout << "SINGLE FERMION TIME: quarkProp4 = " << lost_time_invert << " seconds" << std::endl;
       }	/* end loop over spin_source */
     } /* end loop over color_source */
 
@@ -183,6 +204,10 @@ namespace Chroma
 
     pop(xml_out);
     QDPIO::cout << "Exiting quarkProp4" << std::endl;
+    
+    total_quarkProp4.stop();
+    lost_time = total_quarkProp4.getTimeInSeconds();
+    QDPIO::cout << "TOTAL TIME: quarkProp4 = " << lost_time << " seconds" << std::endl;
 
     END_CODE();
   }
