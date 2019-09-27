@@ -283,8 +283,9 @@ namespace Chroma {
 						: QUDA_COMPUTE_NULL_VECTOR_NO;
 				mg_param.generate_all_levels = ip.generate_all_levels ? QUDA_BOOLEAN_YES
 						: QUDA_BOOLEAN_NO;
-				mg_param.vec_infile[0] = '\0';
-				mg_param.vec_outfile[0] = '\0';
+				//FIXME: ASG: This is to deal with a build issue, should come back later.
+				//mg_param.vec_infile[0] = '\0';
+				//mg_param.vec_outfile[0] = '\0';
 				QDPIO::cout<<"Basic MULTIGRID params copied."<<std::endl;
 			}
 			// setup the multigrid solver
