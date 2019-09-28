@@ -37,12 +37,12 @@ namespace Chroma
   }
 
 
-  void polylp(const multi1d<LatticeColorMatrixF3>& u, DComplex& poly_loop, int mu) 
+  void polylp(const multi1d<LatticeColorMatrixF>& u, DComplex& poly_loop, int mu) 
   {
      polylp_t( u, poly_loop, mu);
   }
 
-  void polylp(const multi1d<LatticeColorMatrixD3>& u, DComplex& poly_loop, int mu)
+  void polylp(const multi1d<LatticeColorMatrixD>& u, DComplex& poly_loop, int mu)
   {
      polylp_t(u, poly_loop, mu);
   }
@@ -68,12 +68,12 @@ namespace Chroma
   }
 
 
-  void polylp(const multi1d<LatticeColorMatrixF3>& u, multi1d<DComplex>& poly_loop)
+  void polylp(const multi1d<LatticeColorMatrixF>& u, multi1d<DComplex>& poly_loop)
   { 
       polylp_t(u,poly_loop);
   }
 
-  void polylp(const multi1d<LatticeColorMatrixD3>& u, multi1d<DComplex>& poly_loop)
+  void polylp(const multi1d<LatticeColorMatrixD>& u, multi1d<DComplex>& poly_loop)
   {
       polylp_t(u,poly_loop);
   }
