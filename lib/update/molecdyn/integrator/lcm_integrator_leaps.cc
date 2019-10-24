@@ -112,9 +112,10 @@ namespace Chroma
 	//  dt*p[mu]
 	tmp_1 = real_step_size[mu]*(s.getP())[mu];
 	
-	// tmp_1 = exp(dt*p[mu])  
-	// expmat(tmp_1, EXP_TWELFTH_ORDER);
-	expmat(tmp_1, EXP_EXACT);
+	// tmp_1 = exp(dt*p[mu])
+	// Need general SU(N) exponentiator, so we can run HMC with NC=4.
+	 expmat(tmp_1, EXP_TWELFTH_ORDER);
+	//expmat(tmp_1, EXP_EXACT);
 	
 	// tmp_2 = exp(dt*p[mu]) u[mu] = tmp_1 * u[mu]
 	tmp_2 = tmp_1*(s.getQ())[mu];
