@@ -267,7 +267,13 @@ namespace Chroma
 	//save the seed if need be
 //	QDP::Seed bkup;
 //	QDP::RNG::savern(bkup);
-	if(((param.curr_num-1) % param.freeze_steps == 0 && param.freeze_check) || !param.freeze_check) { //if freezing is turned on and param.freeze_steps have been taken from the last update or the freezing is turned off, perform the update
+	XMLFileWriter xml_out("foo");
+	push(xml_out, "bar");
+
+        if(param.curr_num < param.freeze_steps) {
+		param.RMCGamma = zero; 
+	}
+	else if((param.curr_num % param.freeze_steps == 0 && param.freeze_check) || !param.freeze_check) { //if freezing is turned on and param.freeze_steps have been taken from the last update or the freezing is turned off, perform the update
 	
 		//construct current shadow field file name string
 		std::string copy = param.shadow_gauge_id;
@@ -306,10 +312,13 @@ namespace Chroma
 				//set coupling to gamma if condition satisfied 
 				param.RMCGamma[mu][nu] = where(rnd_num <= rnd_prob,param.gamma,Real(zero));
 				param.RMCGamma[nu][mu] = param.RMCGamma[mu][nu]; 
+				write(xml_out, "a", param.RMCGamma[mu][nu]);  // write /bar/a = 1
 			}
 		}	
 	}
 //	QDP::RNG::setrn(bkup);
+	pop(xml_out);
+	xml_out.close();
 	param.curr_num++; //reflect the current update number
 
 	END_CODE();
@@ -349,9 +358,12 @@ namespace Chroma
 			LatticeReal log_term = where(param.RMCGamma[mu][nu] != param.gamma, log(Real(1.0)-exp_term), Real(zero));
 
 			LatticeReal old_s = (param.alpha/Real(Nc))*plaq_driven;
-
+			
 			LatticeReal gamma_s = (param.RMCGamma[mu][nu]/Double(Nc*Nc))*plaq_driven*plaq_shadow;
-
+			
+			if(param.curr_num-1 < param.freeze_steps) {
+				log_term = zero;
+			}
 			s_pg += sum(old_s + gamma_s - log_term);
 			
 		}
@@ -414,6 +426,10 @@ namespace Chroma
 
 			LatticeColorMatrix ds_gamma_down = shift(param.RMCGamma[mu][nu],BACKWARD,nu) * down_plaq_shadow_tr  * -down_plaq_driven/Real(2.0*Nc*Nc);
 
+			if(param.curr_num - 1 < param.freeze_steps) {
+				ds_log_up = zero;
+				ds_log_down = zero;
+			}
 			ds_u[mu] += ds_orig + ds_gamma_up + ds_gamma_down - ds_log_up - ds_log_down;
 
 		}

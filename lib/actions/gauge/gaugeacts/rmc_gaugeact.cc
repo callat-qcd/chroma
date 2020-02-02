@@ -57,7 +57,7 @@ namespace Chroma
 			RMCBeta[nu][mu] = beta;
 		}
 	}
-	curr_num = 0;
+	curr_num = 1;
 	read(paramtop, "freeze_steps", freeze_steps);
 	read(paramtop, "freeze_check", freeze_check);
 
