@@ -142,7 +142,8 @@ namespace Chroma {
             cgnrP = false ; // Do CGNE by default
         }
         if( paramtop.count("NEFLanczosParams") > 0 ) {
-            NEFLanczosParams = new LanczosParams(paramtop, "./NEFLanczosParams");
+            read(paramtop, "NEFLanczosParams", NEFLanczosParams);
+            //NEFLanczosParams = new LanczosParams(paramtop, "./NEFLanczosParams");
             InvDeflate = true;
         }
         else { 
@@ -191,7 +192,7 @@ namespace Chroma {
 
         // If we added LanczosParams, InvDeflate is set to true
         if ( p.InvDeflate ) {
-            write(xml, "NEFLanczosParams", *(p.NEFLanczosParams));
+            write(xml, "NEFLanczosParams", p.NEFLanczosParams);
         }
 
         if( p.backup_invP ) { 

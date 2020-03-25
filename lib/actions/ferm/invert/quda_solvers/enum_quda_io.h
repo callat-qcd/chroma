@@ -45,7 +45,7 @@ namespace Chroma
     // QUDA Lanczos type and ENV
     /** S=smallest L=largest                                                                                                                                                        
         R=real M=modulus I=imaniary **/
-    enum QudaEigSpectrumType {
+    enum ChromaQudaEigSpectrumType {
         SR,
         LR,
         SM,
@@ -54,20 +54,20 @@ namespace Chroma
         LI
     };
 
-    namespace QudaEigSpectrumTypeEnv { 
+    namespace ChromaQudaEigSpectrumTypeEnv { 
         extern const std::string typeIDString;
         extern bool registered; 
         bool registerAll(void);   // Forward declaration
     }
 
     // A singleton to hold the typemap
-    typedef SingletonHolder<EnumTypeMap<QudaEigSpectrumType> > theQudaEigSpectrumTypeMap;
+    typedef SingletonHolder<EnumTypeMap<ChromaQudaEigSpectrumType> > theChromaQudaEigSpectrumTypeMap;
 
     //! Read an QudaEigSpectrumType enum
-    void read(XMLReader& r, const std::string& path, QudaEigSpectrumType& t);
+    void read(XMLReader& r, const std::string& path, ChromaQudaEigSpectrumType& t);
 
     //! Write an QudaEigSpectrumType enum
-    void write(XMLWriter& w, const std::string& path, const QudaEigSpectrumType& t);
+    void write(XMLWriter& w, const std::string& path, const ChromaQudaEigSpectrumType& t);
 
   
 

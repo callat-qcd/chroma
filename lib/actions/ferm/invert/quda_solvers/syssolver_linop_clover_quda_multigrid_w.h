@@ -635,8 +635,8 @@ namespace Chroma
 			//strcpy(mg_param.vec_outfile, vec_outfile);
 			//Ignoring this for now.
 
-			mg_param.vec_infile[0] = '\0';
-			mg_param.vec_outfile[0] = '\0';
+            strcpy(mg_param.vec_infile[0], "");
+            strcpy(mg_param.vec_outfile[0], "");
 
 			QDPIO::cout<< solver_string << "Basic MULTIGRID params copied."<<std::endl;
 

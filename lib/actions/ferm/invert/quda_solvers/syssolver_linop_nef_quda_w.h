@@ -430,25 +430,31 @@ namespace Chroma
                 // Lanczos Eigenvector Info
                 QDPIO::cout << "Setting Lanczos Eigenvector Parameters" << std::endl;
 
-                quda_eig_param.spectrum            = invParam.EigSpectrum;
-                quda_eig_param.nConv               = invParam.EigNConv;
-                quda_eig_param.nEv                 = invParam.EigNEv;
-                quda_eig_param.nKr                 = invParam.EigNKr;
-                quda_eig_param.tol                 = invParam.EigTol;
-                quda_eig_param.batched_rotate      = invParam.EigBatchedRotate;
-                quda_eig_param.require_convergence = invParam.EigRequireConvergence;
-                quda_eig_param.max_restarts        = invParam.EigMaxRestarts;
+                switch( invParam.NEFLanczosParams.EigSpectrum ) {
+                case SR:
+                    quda_eig_param.spectrum            = QUDA_SPECTRUM_SR_EIG;
+                    break;
+                default:
+                    QDPIO::cerr << "ONLY SR EigSpectrum type accepted at this time" << std::endl;
+                }
+                quda_eig_param.nConv               = invParam.NEFLanczosParams.EigNConv;
+                quda_eig_param.nEv                 = invParam.NEFLanczosParams.EigNEv;
+                quda_eig_param.nKr                 = invParam.NEFLanczosParams.EigNKr;
+                quda_eig_param.tol                 = toDouble(invParam.NEFLanczosParams.EigTol);
+                quda_eig_param.batched_rotate      = invParam.NEFLanczosParams.EigBatchedRotate;
+                quda_eig_param.require_convergence = invParam.NEFLanczosParams.EigRequireConvergence == true ? QUDA_BOOLEAN_TRUE : QUDA_BOOLEAN_FALSE;
+                quda_eig_param.max_restarts        = invParam.NEFLanczosParams.EigMaxRestarts;
                 quda_eig_param.cuda_prec_ritz      = gpu_precondition_prec;
-                quda_eig_param.use_norm_op         = true;
-                quda_eig_param.use_dagger          = false;
-                quda_eig_param.compute_svd         = false;
-                quda_eig_param.use_poly_acc        = invParam.EigUsePolyAcc;
-                quda_eig_param.poly_deg            = invParam.EigPolyDeg;
-                quda_eig_param.a_min               = invParam.EigAmin;
-                quda_eig_param.a_max               = -1.0; // Instruct QUDA to estimate
-                quda_eig_param.arpack_check        = false;
-                strcpy(quda_eig_param.vec_infile, invParam.EigLoadPath);
-                strcpy(quda_eig_param.vec_outfile, invParam.EigSavePath);
+                quda_eig_param.use_norm_op         = QUDA_BOOLEAN_TRUE;
+                quda_eig_param.use_dagger          = QUDA_BOOLEAN_FALSE;
+                quda_eig_param.compute_svd         = QUDA_BOOLEAN_FALSE;
+                quda_eig_param.use_poly_acc        = invParam.NEFLanczosParams.EigUsePolyAcc == true ? QUDA_BOOLEAN_TRUE : QUDA_BOOLEAN_FALSE;
+                quda_eig_param.poly_deg            = invParam.NEFLanczosParams.EigPolyDeg;
+                quda_eig_param.a_min               = toDouble(invParam.NEFLanczosParams.EigAmin);
+                quda_eig_param.a_max               = toDouble(-1.0); // Instruct QUDA to estimate
+                quda_eig_param.arpack_check        = QUDA_BOOLEAN_FALSE;
+                strcpy(quda_eig_param.vec_infile,  (char*)(invParam.NEFLanczosParams.EigLoadPath)[0] );
+                strcpy(quda_eig_param.vec_outfile, (char*)(invParam.NEFLanczosParams.EigSavePath)[0] );
 
                 quda_inv_param.eig_param           = &quda_eig_param;
             }

@@ -93,8 +93,8 @@ namespace Chroma
         // Deflate?
         bool InvDeflate;
         //Lanczos Params
-        Handle<LanczosParams> NEFLanczosParams;
-        //LanczosParams NEFLanczosParams;
+        //Handle<LanczosParams> NEFLanczosParams;
+        LanczosParams NEFLanczosParams;
 	
         // GCR Specific params
         // Params for the preconditioner

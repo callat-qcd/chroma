@@ -19,7 +19,7 @@ namespace Chroma
         int  EigMaxRestarts;
         bool EigRequireConvergence;
         bool EigUsePolyAcc;
-        QudaEigSpectrumType EigSpectrum;
+        ChromaQudaEigSpectrumType EigSpectrum;
         bool EigUseNormOp;
         /*maybe need these
           QudaSolveType

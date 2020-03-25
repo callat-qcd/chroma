@@ -35,32 +35,32 @@ namespace Chroma {
     }
 
     // Lanczos Parameters
-    namespace  QudaEigSpectrumTypeEnv {
+    namespace  ChromaQudaEigSpectrumTypeEnv {
         bool registerAll(void)
         {
             bool success;
-            success  = theQudaEigSpectrumTypeMap::Instance().registerPair(std::string("SR"),SR);
-            success &= theQudaEigSpectrumTypeMap::Instance().registerPair(std::string("LR"),LR);
-            success &= theQudaEigSpectrumTypeMap::Instance().registerPair(std::string("SM"),SM);
-            success &= theQudaEigSpectrumTypeMap::Instance().registerPair(std::string("LM"),LM);
-            success &= theQudaEigSpectrumTypeMap::Instance().registerPair(std::string("SI"),SI);
-            success &= theQudaEigSpectrumTypeMap::Instance().registerPair(std::string("LI"),LI);
+            success  = theChromaQudaEigSpectrumTypeMap::Instance().registerPair(std::string("SR"),SR);
+            success &= theChromaQudaEigSpectrumTypeMap::Instance().registerPair(std::string("LR"),LR);
+            success &= theChromaQudaEigSpectrumTypeMap::Instance().registerPair(std::string("SM"),SM);
+            success &= theChromaQudaEigSpectrumTypeMap::Instance().registerPair(std::string("LM"),LM);
+            success &= theChromaQudaEigSpectrumTypeMap::Instance().registerPair(std::string("SI"),SI);
+            success &= theChromaQudaEigSpectrumTypeMap::Instance().registerPair(std::string("LI"),LI);
             return success;
         }
-        const std::string typeIDString = "QudaEigSpectrumType";
+        const std::string typeIDString = "ChromaQudaEigSpectrumType";
         bool regisered = registerAll();
     };
 
-    //! Read an QudaEigSpectrumType enum
-    void read(XMLReader& xml_in, const std::string& path, QudaEigSpectrumType& t) 
+    //! Read an ChromaQudaEigSpectrumType enum
+    void read(XMLReader& xml_in, const std::string& path, ChromaQudaEigSpectrumType& t) 
     {
-        theQudaEigSpectrumTypeMap::Instance().read(QudaEigSpectrumTypeEnv::typeIDString, xml_in, path, t);
+        theChromaQudaEigSpectrumTypeMap::Instance().read(ChromaQudaEigSpectrumTypeEnv::typeIDString, xml_in, path, t);
     }
 
-    //! Write an QudaEigSpectrumType enum
-    void write(XMLWriter& xml_out, const std::string& path, const QudaEigSpectrumType& t)
+    //! Write an ChromaQudaEigSpectrumType enum
+    void write(XMLWriter& xml_out, const std::string& path, const ChromaQudaEigSpectrumType& t)
     {
-        theQudaEigSpectrumTypeMap::Instance().write(QudaEigSpectrumTypeEnv::typeIDString, xml_out, path, t);
+        theChromaQudaEigSpectrumTypeMap::Instance().write(ChromaQudaEigSpectrumTypeEnv::typeIDString, xml_out, path, t);
     }
 
 
