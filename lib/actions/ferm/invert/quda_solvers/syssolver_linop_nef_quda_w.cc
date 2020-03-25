@@ -1,6 +1,6 @@
 /*! \file
-*  \brief Solve a MdagM*psi=chi linear system by CG2
-*/
+ *  \brief Solve a MdagM*psi=chi linear system by CG2
+ */
 
 #include "actions/ferm/invert/syssolver_linop_factory.h"
 #include "actions/ferm/invert/syssolver_linop_aggregate.h"
@@ -33,10 +33,10 @@ namespace Chroma
         }
 
         LinOpSystemSolverArray<LatticeFermion>* createFerm(XMLReader& xml_in,
-            const std::string& path,
-            Handle< FermState< LatticeFermion, multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> > > state,
+                                                           const std::string& path,
+                                                           Handle< FermState< LatticeFermion, multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> > > state,
 
-            Handle< LinearOperatorArray<LatticeFermion> > A)
+                                                           Handle< LinearOperatorArray<LatticeFermion> > A)
         {
             return new LinOpSysSolverQUDANEF(A, state,SysSolverQUDANEFParams(xml_in, path));
         }
@@ -46,10 +46,10 @@ namespace Chroma
         {
             bool success = true;
             if (! registered)
-            {
-                success &= Chroma::TheLinOpFermSystemSolverArrayFactory::Instance().registerObject(name, createFerm);
-                registered = true;
-            }
+                {
+                    success &= Chroma::TheLinOpFermSystemSolverArrayFactory::Instance().registerObject(name, createFerm);
+                    registered = true;
+                }
             return success;
         }
     }
@@ -79,9 +79,9 @@ namespace Chroma
 #ifndef BUILD_QUDA_DEVIFACE_SPINOR
         lost_timer.start();
         for(unsigned int s=0; s<quda_inv_param.Ls; s++)
-        {
-            memcpy(reinterpret_cast<char*>(&spinorIn[fermsize*s]),reinterpret_cast<char*>(const_cast<REAL*>(&(chi_s[s].elem(rb[1].start()).elem(0).elem(0).real()))),fermsize*sizeof(REAL));
-        }
+            {
+                memcpy(reinterpret_cast<char*>(&spinorIn[fermsize*s]),reinterpret_cast<char*>(const_cast<REAL*>(&(chi_s[s].elem(rb[1].start()).elem(0).elem(0).real()))),fermsize*sizeof(REAL));
+            }
         lost_timer.stop();
         lost_time = lost_timer.getTimeInSeconds();
         QDPIO::cout << "LOST TIME C: memcpy = " << lost_time << " seconds" << std::endl;
@@ -107,10 +107,10 @@ namespace Chroma
 
 #ifndef BUILD_QUDA_DEVIFACE_SPINOR
         for(unsigned int s=0; s<quda_inv_param.Ls; s++)
-        {
-            //     memset(reinterpret_cast<char*>(&(psi_s[s].elem(all.start()).elem(0).elem(0).real())),0,fermsize*2*sizeof(REAL));
-            memcpy(reinterpret_cast<char*>(const_cast<REAL*>(&(psi_s[s].elem(rb[1].start()).elem(0).elem(0).real()))),reinterpret_cast<char*>(&spinorOut[fermsize*s]),fermsize*sizeof(REAL));
-        }
+            {
+                //     memset(reinterpret_cast<char*>(&(psi_s[s].elem(all.start()).elem(0).elem(0).real())),0,fermsize*2*sizeof(REAL));
+                memcpy(reinterpret_cast<char*>(const_cast<REAL*>(&(psi_s[s].elem(rb[1].start()).elem(0).elem(0).real()))),reinterpret_cast<char*>(&spinorOut[fermsize*s]),fermsize*sizeof(REAL));
+            }
         lost_timer.stop();
         lost_time = lost_timer.getTimeInSeconds();
         QDPIO::cout << "LOST TIME C: memcpy solution = " << lost_time << " seconds" << std::endl;

@@ -10,29 +10,30 @@
 
 namespace Chroma
 {
-  //! Params for clover ferm acts
-  /*! \ingroup fermacts */
-  struct NEFFermActParams
-  {
-    NEFFermActParams();
-    NEFFermActParams(XMLReader& in, const std::string& path);
+    //! Params for clover ferm acts
+    /*! \ingroup fermacts */
+    struct NEFFermActParams
+    {
+        NEFFermActParams();
+        NEFFermActParams(XMLReader& in, const std::string& path);
     
-    Real Mass;  /* The fermion Mass m_f */
-    Real OverMass; /* The domain wall height. In our convention it is positive */
+        Real Mass;  /* The fermion Mass m_f */
+        Real OverMass; /* The domain wall height. In our convention it is positive */
 
-    multi1d<Real> b5; /* For general construction these need to be arrays */
-    multi1d<Real> c5;
+        multi1d<Real> b5; /* For general construction these need to be arrays */
+        multi1d<Real> c5;
 
-    int N5;  /* Length of 5th dim */
-  };
+        int N5;  /* Length of 5th dim */
+    };
 
 
-  // Reader/writers
-  /*! \ingroup fermacts */
-  void read(XMLReader& xml, const std::string& path, NEFFermActParams& param);
+    // Reader/writers
+    /*! \ingroup fermacts */
+    void read(XMLReader& xml, const std::string& path, NEFFermActParams& param);
 
-  /*! \ingroup fermacts */
-  void write(XMLWriter& xml, const std::string& path, const NEFFermActParams& param);
+    /*! \ingroup fermacts */
+    void write(XMLWriter& xml, const std::string& path, const NEFFermActParams& param);
+
 }
 
 #endif
