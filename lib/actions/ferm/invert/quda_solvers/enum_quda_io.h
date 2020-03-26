@@ -24,6 +24,8 @@ namespace Chroma
         MR
     };
 
+    // NOTE - this is distressingly decpetive - QUDA has a QudaSolveType - notice the missing "r"
+    //      - which is the only reason we can declare something that looks like a QUDA type
     namespace QudaSolverTypeEnv { 
         extern const std::string typeIDString;
         extern bool registered; 
@@ -40,6 +42,53 @@ namespace Chroma
 
     //! Write an QudaSolverType enum
     void write(XMLWriter& w, const std::string& path, const QudaSolverType& t);
+
+    //
+    // QUDA MatPCType
+    //
+    enum ChromaQudaMatPCType {
+        ODD_ODD_ASYM,   // ODD ODD ASYMMETRIC
+        ODD_ODD,        // ODD ODD SYMMETRIC
+        EVEN_EVEN_ASYM, // same for EVEN EVEN
+        EVEN_EVEN
+    };
+    namespace ChromaQudaMatPCTypeEnv { 
+        extern const std::string typeIDString;
+        extern bool registered; 
+        bool registerAll(void);   // Forward declaration
+    }
+
+    // A singleton to hold the typemap
+    typedef SingletonHolder<EnumTypeMap<ChromaQudaMatPCType> > theChromaQudaMatPCTypeMap;
+
+    //! Read an QudaEigSpectrumType enum
+    void read(XMLReader& r, const std::string& path, ChromaQudaMatPCType& t);
+
+    //! Write an QudaEigSpectrumType enum
+    void write(XMLWriter& w, const std::string& path, const ChromaQudaMatPCType& t);
+
+    //
+    // QUDA MatSolutionType
+    //
+    enum ChromaQudaMatSolutionType {
+        MAT,   // QUDA hands Chroma Full Solution
+        MATPC  // QUDA hands Chroma Preconditioned Solution
+    };
+    namespace ChromaQudaMatSolutionTypeEnv { 
+        extern const std::string typeIDString;
+        extern bool registered; 
+        bool registerAll(void);   // Forward declaration
+    }
+
+    // A singleton to hold the typemap
+    typedef SingletonHolder<EnumTypeMap<ChromaQudaMatSolutionType> > theChromaQudaMatSolutionTypeMap;
+
+    //! Read an QudaEigSpectrumType enum
+    void read(XMLReader& r, const std::string& path, ChromaQudaMatSolutionType& t);
+
+    //! Write an QudaEigSpectrumType enum
+    void write(XMLWriter& w, const std::string& path, const ChromaQudaMatSolutionType& t);
+
 
 
     // QUDA Lanczos type and ENV

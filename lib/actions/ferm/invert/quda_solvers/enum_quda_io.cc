@@ -12,7 +12,7 @@ namespace Chroma {
         bool registerAll(void)
         {
             bool success;
-            success = theQudaSolverTypeMap::Instance().registerPair(std::string("CG"),CG);
+            success  = theQudaSolverTypeMap::Instance().registerPair(std::string("CG"),CG);
             success &= theQudaSolverTypeMap::Instance().registerPair(std::string("BICGSTAB"),BICGSTAB);
             success &= theQudaSolverTypeMap::Instance().registerPair(std::string("GCR"),GCR);
             success &= theQudaSolverTypeMap::Instance().registerPair(std::string("MR"),MR);
@@ -33,6 +33,61 @@ namespace Chroma {
     {
         theQudaSolverTypeMap::Instance().write(QudaSolverTypeEnv::typeIDString, xml_out, path, t);
     }
+
+
+    // QUDA MatSolutionType
+    namespace  ChromaQudaMatSolutionTypeEnv {
+        bool registerAll(void)
+        {
+            bool success;
+            success  = theChromaQudaMatSolutionTypeMap::Instance().registerPair(std::string("MAT")  ,MAT);
+            success &= theChromaQudaMatSolutionTypeMap::Instance().registerPair(std::string("MATPC"),MATPC);
+            return success;
+        }
+        const std::string typeIDString = "ChromaQudaMatSolutionType";
+        bool regisered = registerAll();
+    };
+
+    //! Read an ChromaQudaMatSolutionType enum
+    void read(XMLReader& xml_in, const std::string& path, ChromaQudaMatSolutionType& t) 
+    {
+        theChromaQudaMatSolutionTypeMap::Instance().read(ChromaQudaMatSolutionTypeEnv::typeIDString, xml_in, path, t);
+    }
+
+    //! Write an ChromaQudaMatSolutionType enum
+    void write(XMLWriter& xml_out, const std::string& path, const ChromaQudaMatSolutionType& t)
+    {
+        theChromaQudaMatSolutionTypeMap::Instance().write(ChromaQudaMatSolutionTypeEnv::typeIDString, xml_out, path, t);
+    }
+
+
+    // QUDA MatPCType
+    namespace  ChromaQudaMatPCTypeEnv {
+        bool registerAll(void)
+        {
+            bool success;
+            success  = theChromaQudaMatPCTypeMap::Instance().registerPair(std::string("ODD_ODD")       ,ODD_ODD);
+            success &= theChromaQudaMatPCTypeMap::Instance().registerPair(std::string("ODD_ODD_ASYM")  ,ODD_ODD_ASYM);
+            success &= theChromaQudaMatPCTypeMap::Instance().registerPair(std::string("EVEN_EVEN")     ,EVEN_EVEN);
+            success &= theChromaQudaMatPCTypeMap::Instance().registerPair(std::string("EVEN_EVEN_ASYM"),EVEN_EVEN_ASYM);
+            return success;
+        }
+        const std::string typeIDString = "ChromaQudaMatPCType";
+        bool regisered = registerAll();
+    };
+
+    //! Read an ChromaQudaMatPCType enum
+    void read(XMLReader& xml_in, const std::string& path, ChromaQudaMatPCType& t) 
+    {
+        theChromaQudaMatPCTypeMap::Instance().read(ChromaQudaMatPCTypeEnv::typeIDString, xml_in, path, t);
+    }
+
+    //! Write an ChromaQudaMatPCType enum
+    void write(XMLWriter& xml_out, const std::string& path, const ChromaQudaMatPCType& t)
+    {
+        theChromaQudaMatPCTypeMap::Instance().write(ChromaQudaMatPCTypeEnv::typeIDString, xml_out, path, t);
+    }
+
 
     // Lanczos Parameters
     namespace  ChromaQudaEigSpectrumTypeEnv {
@@ -62,7 +117,6 @@ namespace Chroma {
     {
         theChromaQudaEigSpectrumTypeMap::Instance().write(ChromaQudaEigSpectrumTypeEnv::typeIDString, xml_out, path, t);
     }
-
 
 
     namespace  QudaPrecisionTypeEnv {

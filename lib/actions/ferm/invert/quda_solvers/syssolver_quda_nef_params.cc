@@ -24,6 +24,27 @@ namespace Chroma {
 
         read(paramtop, "SolverType", solverType);
 
+        if ( paramtop.count("checkSolution") > 0 ) {
+            read(paramtop, "checkSolution", checkSolution);
+        }
+        else {
+            checkSolution = false;
+        }
+
+        if ( paramtop.count("MatPCType") > 0 ) {
+            read(paramtop, "MatPCType", MatPCType);
+        }
+        else {
+            MatPCType = ODD_ODD_ASYM; // change me to ODD_ODD when chroma supports it
+        }
+
+        if ( paramtop.count("MatSolutionType") > 0 ) {
+            read(paramtop, "MatSolutionType", MatSolutionType);
+        }
+        else {
+            MatSolutionType = MATPC; // change me to MAT when chroma supports all
+        }
+
         if ( paramtop.count("Verbose") > 0 ) { 
             read(paramtop, "Verbose", verboseP);
         }
@@ -181,6 +202,9 @@ namespace Chroma {
         write(xml, "AxialGaugeFix", p.axialGaugeP);
         write(xml, "SilentFail", p.SilentFailP);
         write(xml, "RsdToleranceFactor", p.RsdToleranceFactor);
+        write(xml, "checkSolution",   p.checkSolution);
+        write(xml, "MatPCType",       p.MatPCType);
+        write(xml, "MatSolutionType", p.MatSolutionType);
 
         write(xml, "AutotuneDslash", p.tuneDslashP);
         if( p.innerParamsP ) { 

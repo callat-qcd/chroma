@@ -280,7 +280,8 @@ namespace Chroma
 
             // Mass
             quda_inv_param.mass = toDouble(invParam.NEFParams.Mass);
-            quda_inv_param.m5=toDouble(-invParam.NEFParams.OverMass);
+            // The sign convention of M5 for Chroma and QUDA are opposite
+            quda_inv_param.m5=toDouble( - invParam.NEFParams.OverMass);
             quda_inv_param.Ls=invParam.NEFParams.N5;
             // Kate made these static so no need to alloc them.
             if ( invParam.NEFParams.N5 >= QUDA_MAX_DWF_LS ) {
@@ -317,13 +318,13 @@ namespace Chroma
             };
 
             for(int s=0; s < quda_inv_param.Ls; ++s) {
-                QDPIO::cout << "CHROMA_NEF_PARAM: b5[" <<s<<"] = " << toDouble(invParam.NEFParams.b5[s]) << "   c5[" << s << "] = " << toDouble(invParam.NEFParams.c5[s]) << std::endl;
+                QDPIO::cout << "CHROMA_NEF_PARAM: b5[" <<s<<"] = " << toDouble(invParam.NEFParams.b5[s]) << "     c5[" << s << "] = " << toDouble(invParam.NEFParams.c5[s]) << std::endl;
 
                 const cmpx& qb5 = reinterpret_cast<const cmpx&>(quda_inv_param.b_5[s]);
                 const cmpx& qc5 = reinterpret_cast<const cmpx&>(quda_inv_param.c_5[s]);
 
-                QDPIO::cout << "QUDA_NEF_PARAM: b5[" <<s<<"] = (" << qb5.re << ", " << qb5.im << ") "
-                            << "   c5[" << s << "] = (" << qc5.re << ", " << qc5.im << ")" << std::endl;
+                QDPIO::cout << "QUDA_NEF_PARAM:   b5[" <<s<<"] = (" << qb5.re << ", " << qb5.im << ")"
+                            << "  c5[" << s << "] = (" << qc5.re << ", " << qc5.im << ")" << std::endl;
             }
 
             /* OLD print
@@ -369,8 +370,22 @@ namespace Chroma
             }
 
             //only symmetric DWF supported at the moment:
-            QDPIO::cout << "Using Symmetric Linop: A_oo - D_oe A^{-1}_ee D_eo" << std::endl;
-            quda_inv_param.matpc_type             = QUDA_MATPC_ODD_ODD_ASYMMETRIC;
+            switch( invParam.MatPCType ) {
+            case ODD_ODD_ASYM:
+                QDPIO::cout << "Using ODD_ODD_Asymmetric Linop: A_oo - D_oe A^{-1}_ee D_eo" << std::endl;
+                quda_inv_param.matpc_type             = QUDA_MATPC_ODD_ODD_ASYMMETRIC;
+                break;
+            case ODD_ODD:
+                QDPIO::cout << "Using ODD_ODD_symmetric Linop: 1 - A_oo ^{-1} Doe Aee^{-1} Deo" << std::endl;
+                quda_inv_param.matpc_type             = QUDA_MATPC_ODD_ODD;
+                break;
+
+            default: // for now for sure, Chroma does not support EVEN_EVEN
+                QDPIO::cerr << "EVEN_EVEN and EVEN_EVEN_ASYM solutions are not yet supported by Chroma" << std::endl; //: you chose " 
+                //<< toString(invParam.MatPCType) << std::endl;
+                break;
+            }
+            
             quda_inv_param.dagger                 = QUDA_DAG_NO;
             quda_inv_param.mass_normalization     = QUDA_KAPPA_NORMALIZATION;
             quda_inv_param.cpu_prec               = cpu_prec;
@@ -429,6 +444,8 @@ namespace Chroma
             if ( invParam.InvDeflate ) {
                 // Lanczos Eigenvector Info
                 QDPIO::cout << "Setting Lanczos Eigenvector Parameters" << std::endl;
+                QDPIO::cout << "Telling QUDA to preserve deflation" << std::endl;
+                quda_eig_param.preserve_deflation = QUDA_BOOLEAN_TRUE;
 
                 switch( invParam.NEFLanczosParams.EigSpectrum ) {
                 case SR:
@@ -453,8 +470,10 @@ namespace Chroma
                 quda_eig_param.a_min               = toDouble(invParam.NEFLanczosParams.EigAmin);
                 quda_eig_param.a_max               = toDouble(-1.0); // Instruct QUDA to estimate
                 quda_eig_param.arpack_check        = QUDA_BOOLEAN_FALSE;
-                strcpy(quda_eig_param.vec_infile,  (char*)(invParam.NEFLanczosParams.EigLoadPath)[0] );
-                strcpy(quda_eig_param.vec_outfile, (char*)(invParam.NEFLanczosParams.EigSavePath)[0] );
+                //strcpy(quda_eig_param.vec_infile,  (char*)(invParam.NEFLanczosParams.EigLoadPath).c_str() );
+                //strcpy(quda_eig_param.vec_outfile, (char*)(invParam.NEFLanczosParams.EigSavePath).c_str() );
+                strcpy(quda_eig_param.vec_infile,  (invParam.NEFLanczosParams.EigLoadPath).c_str() );
+                strcpy(quda_eig_param.vec_outfile, (invParam.NEFLanczosParams.EigSavePath).c_str() );
 
                 quda_inv_param.eig_param           = &quda_eig_param;
             }
@@ -463,7 +482,7 @@ namespace Chroma
             }
 
             if( invParam.verboseP ) {
-                quda_inv_param.verbosity = QUDA_DEBUG_VERBOSE;
+                quda_inv_param.verbosity = QUDA_VERBOSE;
             }
             else {
                 quda_inv_param.verbosity = QUDA_SUMMARIZE;
@@ -651,10 +670,8 @@ namespace Chroma
             swatch.stop();
             double time = swatch.getTimeInSeconds();
 
-#if 0 // TURN OFF Chroma Check of Solution
-      // Check Solution
-            {
-
+            // Check Solution
+            if ( invParam.checkSolution ) {
                 multi1d<T> r(A->size());
                 multi1d<T> Ax(A->size());
                 r=zero;
@@ -673,19 +690,24 @@ namespace Chroma
                 Double rel_resid = sqrt(r_norm/b_norm);
 
                 res.resid = resid;
-                QDPIO::cout << "QUDA_"<< solver_string <<"_NEF_SOLVER: " << res.n_count << " iterations. Max. Rsd = " << res.resid << " Max. Relative Rsd = " << rel_resid << std::endl;
+                QDPIO::cout << "QUDA_"<< solver_string <<"_NEF_SOLVER: " 
+                            << res.n_count << " iterations. Max. Rsd = " << res.resid 
+                            << " Max. Relative Rsd = " << rel_resid << std::endl;
 
                 // Convergence Check/Blow Up
                 if ( ! invParam.SilentFailP ) {
                     if (  toBool( rel_resid >  invParam.RsdToleranceFactor*invParam.RsdTarget) )
                         {
-                            QDPIO::cerr << "ERROR: QUDA Solver residuum is outside tolerance: QUDA resid="<< rel_resid << " Desired =" << invParam.RsdTarget << " Max Tolerated = " << invParam.RsdToleranceFactor*invParam.RsdTarget << std::endl;
+                            QDPIO::cerr << "ERROR: QUDA Solver residuum is outside tolerance: QUDA resid=" << rel_resid 
+                                        << " Desired =" << invParam.RsdTarget 
+                                        << " Max Tolerated = " << invParam.RsdToleranceFactor*invParam.RsdTarget << std::endl;
                             QDP_abort(1);
                         }
                 }
             }
-#endif
-            QDPIO::cout << "QUDA_"<< solver_string <<"_NEF_SOLVER: " << res.n_count << " iterations" << std::endl;
+            else {
+                QDPIO::cout << "QUDA_"<< solver_string <<"_NEF_SOLVER: " << res.n_count << " iterations" << std::endl;
+            }
             END_CODE();
             return res;
         }

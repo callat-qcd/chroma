@@ -97,276 +97,276 @@
 
 namespace Chroma
 {
-  //! Given a complete propagator as a source, this does all the inversions needed
-  /*! \ingroup qprop
-   *
-   * This routine is actually generic to Domain Wall fermions (Array) fermions
-   *
-   * \param q_sol    quark propagator ( Write )
-   * \param q_src    source ( Read )
-   * \param t_src    time slice of source ( Read )
-   * \param j_decay  direction of decay ( Read )
-   * \param invParam inverter params ( Read )
-   * \param ncg_had  number of CG iterations ( Write )
-   */
-  template<typename T, typename P, typename Q, template<class,class,class> class C>
-  void nef_quarkProp_a(LatticePropagator& q_sol, 
-		       XMLWriter& xml_out,
-		       const LatticePropagator& q_src,
-		       int t_src, int j_decay,
-		       const C<T,P,Q>& S_f,
-		       Handle< FermState<T,P,Q> > state,
-		       const GroupXML_t& invParam,
-		       int& ncg_had)
-  {
-    START_CODE();
-
-    push(xml_out, "DWF_QuarkProp4");
-
-    ncg_had = 0;
-
-    // Setup solver
-    Handle< SystemSolverArray<LatticeFermion> > qpropT(S_f.qpropT(state,invParam));
-
-    multi1d<LatticePropagator> prop5d(S_f.size()) ;
-    LatticePropagator q_mp  ;
-
-    multi1d<LatticeFermion> psi(S_f.size()) ;
-    
-    // This version loops over all color and spin indices
-    for(int color_source = 0; color_source < Nc; ++color_source)
+    //! Given a complete propagator as a source, this does all the inversions needed
+    /*! \ingroup qprop
+     *
+     * This routine is actually generic to Domain Wall fermions (Array) fermions
+     *
+     * \param q_sol    quark propagator ( Write )
+     * \param q_src    source ( Read )
+     * \param t_src    time slice of source ( Read )
+     * \param j_decay  direction of decay ( Read )
+     * \param invParam inverter params ( Read )
+     * \param ncg_had  number of CG iterations ( Write )
+     */
+    template<typename T, typename P, typename Q, template<class,class,class> class C>
+    void nef_quarkProp_a(LatticePropagator& q_sol, 
+                         XMLWriter& xml_out,
+                         const LatticePropagator& q_src,
+                         int t_src, int j_decay,
+                         const C<T,P,Q>& S_f,
+                         Handle< FermState<T,P,Q> > state,
+                         const GroupXML_t& invParam,
+                         int& ncg_had)
     {
-      for(int spin_source = 0; spin_source < Ns; ++spin_source)
-      {
-	QDPIO::cout<<"nef_quarkProp:: doing color  : "<< color_source;
-	QDPIO::cout<<" and spin : "<< spin_source<<std::endl  ;
+        START_CODE();
 
-	psi = zero ;  // note this is ``zero'' and not 0
-	LatticeFermion tmp,tt ;
-	tmp = zero ;
-	PropToFerm(q_src, tmp, color_source, spin_source);
+        push(xml_out, "DWF_QuarkProp4");
+
+        ncg_had = 0;
+
+        // Setup solver
+        Handle< SystemSolverArray<LatticeFermion> > qpropT(S_f.qpropT(state,invParam));
+
+        multi1d<LatticePropagator> prop5d(S_f.size()) ;
+        LatticePropagator q_mp  ;
+
+        multi1d<LatticeFermion> psi(S_f.size()) ;
+    
+        // This version loops over all color and spin indices
+        for(int color_source = 0; color_source < Nc; ++color_source)
+            {
+                for(int spin_source = 0; spin_source < Ns; ++spin_source)
+                    {
+                        QDPIO::cout<<"nef_quarkProp:: doing color  : "<< color_source;
+                        QDPIO::cout<<" and spin : "<< spin_source<<std::endl  ;
+
+                        psi = zero ;  // note this is ``zero'' and not 0
+                        LatticeFermion tmp,tt ;
+                        tmp = zero ;
+                        PropToFerm(q_src, tmp, color_source, spin_source);
 	   
-	/* 
-	 * Normalize the source in case it is really huge or small - 
-	 * a trick to avoid overflows or underflows
-	 */
+                        /* 
+                         * Normalize the source in case it is really huge or small - 
+                         * a trick to avoid overflows or underflows
+                         */
 
-	Real fact = 1.0;
-	Real nrm = sqrt(norm2(tmp));
-	if (toFloat(nrm) != 0.0)
-	  fact /= nrm;
+                        Real fact = 1.0;
+                        Real nrm = sqrt(norm2(tmp));
+                        if (toFloat(nrm) != 0.0)
+                            fact /= nrm;
 
-	// Rescale
-	tmp *= fact;
+                        // Rescale
+                        tmp *= fact;
 
-	QDPIO::cout<<"Normalization Factor: "<< fact<<std::endl ;
+                        QDPIO::cout<<"Normalization Factor: "<< fact<<std::endl ;
 
-	int N5(S_f.size());
-	QDPIO::cout << "N5=" << N5 << std::endl;
+                        int N5(S_f.size());
+                        QDPIO::cout << "N5=" << N5 << std::endl;
 
-	multi1d<LatticeFermion> chi(N5) ;
-	chi = zero ;
-	// Split the source to oposite walls according to chirality
-	// and apply Dminus
-	tt = chiralProjectPlus(tmp) ;
-	S_f.Dminus(chi[0   ],tt,state,PLUS,0);
-	tt = chiralProjectMinus(tmp) ; 
-	S_f.Dminus(chi[N5-1],tt,state,PLUS,N5-1);
+                        multi1d<LatticeFermion> chi(N5) ;
+                        chi = zero ;
+                        // Split the source to oposite walls according to chirality
+                        // and apply Dminus
+                        tt = chiralProjectPlus(tmp) ;
+                        S_f.Dminus(chi[0   ],tt,state,PLUS,0);
+                        tt = chiralProjectMinus(tmp) ; 
+                        S_f.Dminus(chi[N5-1],tt,state,PLUS,N5-1);
 
       
 
-	// now we are ready invert
-	// Compute the propagator for given source color/spin.	   
-	{
-	  SystemSolverResults_t result = (*qpropT)(psi,chi);
-	  ncg_had += result.n_count;
+                        // now we are ready invert
+                        // Compute the propagator for given source color/spin.	   
+                        {
+                            SystemSolverResults_t result = (*qpropT)(psi,chi);
+                            ncg_had += result.n_count;
 
-	  push(xml_out,"Qprop");
-	  write(xml_out, "color_source", color_source);
-	  write(xml_out, "spin_source", spin_source);
-	  write(xml_out, "n_count", result.n_count);
-	  write(xml_out, "resid", result.resid);
-	  pop(xml_out);
-	}
+                            push(xml_out,"Qprop");
+                            write(xml_out, "color_source", color_source);
+                            write(xml_out, "spin_source", spin_source);
+                            write(xml_out, "n_count", result.n_count);
+                            write(xml_out, "resid", result.resid);
+                            pop(xml_out);
+                        }
 
-	// Unnormalize the source following the inverse 
-	// of the normalization above
-	fact = Real(1) / fact;
-	for(int i = 0; i < N5; ++i)
-	  psi[i] *= fact; 
+                        // Unnormalize the source following the inverse 
+                        // of the normalization above
+                        fact = Real(1) / fact;
+                        for(int i = 0; i < N5; ++i)
+                            psi[i] *= fact; 
 
-	/*
-	 * Move the solution to the appropriate components
-	 * of quark propagator.
-	 */
+                        /*
+                         * Move the solution to the appropriate components
+                         * of quark propagator.
+                         */
 	   
-	//First the 5D quark propagator
-	for(int s(0);s<S_f.size();s++)
-	  FermToProp(psi[s], prop5d[s], color_source, spin_source);
-	// Now get the 4D propagator too
+                        //First the 5D quark propagator
+                        for(int s(0);s<S_f.size();s++)
+                            FermToProp(psi[s], prop5d[s], color_source, spin_source);
+                        // Now get the 4D propagator too
 
-	tmp = chiralProjectMinus(psi[0]) + chiralProjectPlus(psi[N5-1]) ;
-	// move solution to the appropriate components of the 4d
-	// quark propagator
-	FermToProp(tmp, q_sol, color_source, spin_source);
+                        tmp = chiralProjectMinus(psi[0]) + chiralProjectPlus(psi[N5-1]) ;
+                        // move solution to the appropriate components of the 4d
+                        // quark propagator
+                        FermToProp(tmp, q_sol, color_source, spin_source);
 
-	// move solution to the appropriate components of the 4d
-	// midpoint quark propagator 
-	tmp = chiralProjectPlus(psi[N5/2 - 1]) + chiralProjectMinus(psi[N5/2]) ;
-	FermToProp(tmp, q_mp, color_source, spin_source);
+                        // move solution to the appropriate components of the 4d
+                        // midpoint quark propagator 
+                        tmp = chiralProjectPlus(psi[N5/2 - 1]) + chiralProjectMinus(psi[N5/2]) ;
+                        FermToProp(tmp, q_mp, color_source, spin_source);
 
 	   
-      }	/* end loop over spin_source */
-    } /* end loop over color_source */
+                    }	/* end loop over spin_source */
+            } /* end loop over color_source */
 
-    LatticeComplex cfield ;
+        LatticeComplex cfield ;
 
-    /**
-     // constuct the conserved axial current correlator
-     nef_conserved_axial_ps_corr(cfield,state->getLinks(),prop5d,j_decay);
-    **/
+        /**
+         // constuct the conserved axial current correlator
+         nef_conserved_axial_ps_corr(cfield,state->getLinks(),prop5d,j_decay);
+        **/
 		       
-    multi1d<DComplex> corr ;  
+        multi1d<DComplex> corr ;  
    
-    SftMom trick(0,false,j_decay) ;
+        SftMom trick(0,false,j_decay) ;
    
-    corr = sumMulti(cfield, trick.getSet());
-    // Length of lattice in time direction
-    int length = trick.numSubsets();
-    multi1d<Real> mesprop(length);
-    for(int t(0);t<length; t++){
-      int t_eff( (t - t_src + length) % length ) ;
-      mesprop[t_eff] = real(corr[t]) ; 
-    }
+        corr = sumMulti(cfield, trick.getSet());
+        // Length of lattice in time direction
+        int length = trick.numSubsets();
+        multi1d<Real> mesprop(length);
+        for(int t(0);t<length; t++){
+            int t_eff( (t - t_src + length) % length ) ;
+            mesprop[t_eff] = real(corr[t]) ; 
+        }
 
-    push(xml_out, "time_direction");
-    write(xml_out, "t_dir",j_decay);
-    pop(xml_out);
+        push(xml_out, "time_direction");
+        write(xml_out, "t_dir",j_decay);
+        pop(xml_out);
 
-    /**
-       push(xml_out, "DWF_ConservedAxial");
-       write(xml_out, "mesprop", mesprop); 
-       pop(xml_out);
+        /**
+           push(xml_out, "DWF_ConservedAxial");
+           write(xml_out, "mesprop", mesprop); 
+           pop(xml_out);
 
-       // The local axial corruent pseudoscalar correlator
-       int d(1<<j_decay);
-       cfield = trace( adj(q_sol)*Gamma(d)*q_sol ) ;
-       corr = sumMulti(cfield, trick.getSet()) ;
-       for(int t(0);t<length; t++){
-       int t_eff( (t - t_src + length) % length ) ;
-       mesprop[t_eff] = -real(corr[t]) ; // sign fix
-       }
-       push(xml_out, "DWF_LocalAxial");
-       write(xml_out, "mesprop", mesprop); 
-       pop(xml_out);
-    **/
+           // The local axial corruent pseudoscalar correlator
+           int d(1<<j_decay);
+           cfield = trace( adj(q_sol)*Gamma(d)*q_sol ) ;
+           corr = sumMulti(cfield, trick.getSet()) ;
+           for(int t(0);t<length; t++){
+           int t_eff( (t - t_src + length) % length ) ;
+           mesprop[t_eff] = -real(corr[t]) ; // sign fix
+           }
+           push(xml_out, "DWF_LocalAxial");
+           write(xml_out, "mesprop", mesprop); 
+           pop(xml_out);
+        **/
 
-    //Now the midpoint Pseudoscalar correlator
-    multi1d<Double> tmp(length);
-    tmp = sumMulti(localNorm2(q_mp), trick.getSet());
-    for(int t(0);t<length; t++){
-      int t_eff( (t - t_src + length) % length ) ;
-      mesprop[t_eff] = tmp[t] ; 
-    }
+        //Now the midpoint Pseudoscalar correlator
+        multi1d<Double> tmp(length);
+        tmp = sumMulti(localNorm2(q_mp), trick.getSet());
+        for(int t(0);t<length; t++){
+            int t_eff( (t - t_src + length) % length ) ;
+            mesprop[t_eff] = tmp[t] ; 
+        }
   
-    push(xml_out, "DWF_MidPoint_Pseudo");
-    write(xml_out, "mesprop", mesprop);
-    pop(xml_out);
+        push(xml_out, "DWF_MidPoint_Pseudo");
+        write(xml_out, "mesprop", mesprop);
+        pop(xml_out);
 
 
-    tmp = sumMulti(localNorm2(q_sol), trick.getSet());
-    for(int t(0);t<length; t++){
-      int t_eff( (t - t_src + length) % length ) ;
-      mesprop[t_eff] = tmp[t] ; // only need the zero momentum
+        tmp = sumMulti(localNorm2(q_sol), trick.getSet());
+        for(int t(0);t<length; t++){
+            int t_eff( (t - t_src + length) % length ) ;
+            mesprop[t_eff] = tmp[t] ; // only need the zero momentum
+        }
+        push(xml_out, "DWF_Psuedo_Pseudo");
+        write(xml_out, "mesprop", mesprop);
+        pop(xml_out);
+
+        pop(xml_out);   // DWF_QuarkProp
+
+        /**
+           check_nef_ward_identity(state->getLinks(),prop5d,q_src,
+           q_sol,q_mp,S_f.quark_mass(),
+           j_decay);
+        **/
+
+        END_CODE();
     }
-    push(xml_out, "DWF_Psuedo_Pseudo");
-    write(xml_out, "mesprop", mesprop);
-    pop(xml_out);
-
-    pop(xml_out);   // DWF_QuarkProp
-
-    /**
-       check_nef_ward_identity(state->getLinks(),prop5d,q_src,
-       q_sol,q_mp,S_f.quark_mass(),
-       j_decay);
-    **/
-
-    END_CODE();
-  }
 
 
-  //! Given a complete propagator as a source, this does all the inversions needed
-  /*! \ingroup qprop
-   *
-   * This routine is actually generic to Domain Wall fermions (Array) fermions
-   *
-   * \param q_sol    quark propagator ( Write )
-   * \param q_src    source ( Read )
-   * \param t_src    time slice of source ( Read )
-   * \param j_decay  direction of decay ( Read )
-   * \param invParam inverter params ( Read )
-   * \param ncg_had  number of CG iterations ( Write )
-   */
+    //! Given a complete propagator as a source, this does all the inversions needed
+    /*! \ingroup qprop
+     *
+     * This routine is actually generic to Domain Wall fermions (Array) fermions
+     *
+     * \param q_sol    quark propagator ( Write )
+     * \param q_src    source ( Read )
+     * \param t_src    time slice of source ( Read )
+     * \param j_decay  direction of decay ( Read )
+     * \param invParam inverter params ( Read )
+     * \param ncg_had  number of CG iterations ( Write )
+     */
 
-  void nef_quarkProp4(LatticePropagator& q_sol, 
-		      XMLWriter& xml_out,
-		      const LatticePropagator& q_src,
-		      int t_src, int j_decay,
-		      const UnprecDWFermActBaseArray<LatticeFermion,
-		      multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> >& S_f,
-		      Handle< FermState<LatticeFermion, 
-		      multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> > > state,
-		      const GroupXML_t& invParam,
-		      int& ncg_had)
-  {
-    nef_quarkProp_a<LatticeFermion,multi1d<LatticeColorMatrix>,multi1d<LatticeColorMatrix>,
-      UnprecDWFermActBaseArray>(
-	q_sol, 
-	xml_out, 
-	q_src, 
-	t_src, 
-	j_decay, 
-	S_f, 
-	state,
-	invParam,
-	ncg_had);
-  }
+    void nef_quarkProp4(LatticePropagator& q_sol, 
+                        XMLWriter& xml_out,
+                        const LatticePropagator& q_src,
+                        int t_src, int j_decay,
+                        const UnprecDWFermActBaseArray<LatticeFermion,
+                        multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> >& S_f,
+                        Handle< FermState<LatticeFermion, 
+                        multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> > > state,
+                        const GroupXML_t& invParam,
+                        int& ncg_had)
+    {
+        nef_quarkProp_a<LatticeFermion,multi1d<LatticeColorMatrix>,multi1d<LatticeColorMatrix>,
+                        UnprecDWFermActBaseArray>(
+                                                  q_sol, 
+                                                  xml_out, 
+                                                  q_src, 
+                                                  t_src, 
+                                                  j_decay, 
+                                                  S_f, 
+                                                  state,
+                                                  invParam,
+                                                  ncg_had);
+    }
 
-  //! Given a complete propagator as a source, this does all the inversions needed
-  /*! \ingroup qprop
-   *
-   * This routine is actually generic to Domain Wall fermions (Array) fermions
-   *
-   * \param q_sol    quark propagator ( Write )
-   * \param q_src    source ( Read )
-   * \param t_src    time slice of source ( Read )
-   * \param j_decay  direction of decay ( Read )
-   * \param invParam inverter params ( Read )
-   * \param ncg_had  number of CG iterations ( Write )
-   */
+    //! Given a complete propagator as a source, this does all the inversions needed
+    /*! \ingroup qprop
+     *
+     * This routine is actually generic to Domain Wall fermions (Array) fermions
+     *
+     * \param q_sol    quark propagator ( Write )
+     * \param q_src    source ( Read )
+     * \param t_src    time slice of source ( Read )
+     * \param j_decay  direction of decay ( Read )
+     * \param invParam inverter params ( Read )
+     * \param ncg_had  number of CG iterations ( Write )
+     */
 
-  void nef_quarkProp4(LatticePropagator& q_sol, 
-		      XMLWriter& xml_out,
-		      const LatticePropagator& q_src,
-		      int t_src, int j_decay,
-		      const EvenOddPrecDWFermActBaseArray<LatticeFermion,
-		      multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> >& S_f,
-		      Handle< FermState<LatticeFermion,
-		      multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> > > state,
-		      const GroupXML_t& invParam,
-		      int& ncg_had)
-  {
-    nef_quarkProp_a<LatticeFermion,multi1d<LatticeColorMatrix>,multi1d<LatticeColorMatrix>,
-      EvenOddPrecDWFermActBaseArray>(
-	q_sol, 
-	xml_out, 
-	q_src, 
-	t_src, 
-	j_decay, 
-	S_f, 
-	state,
-	invParam,
-	ncg_had);
-  }
+    void nef_quarkProp4(LatticePropagator& q_sol, 
+                        XMLWriter& xml_out,
+                        const LatticePropagator& q_src,
+                        int t_src, int j_decay,
+                        const EvenOddPrecDWFermActBaseArray<LatticeFermion,
+                        multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> >& S_f,
+                        Handle< FermState<LatticeFermion,
+                        multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> > > state,
+                        const GroupXML_t& invParam,
+                        int& ncg_had)
+    {
+        nef_quarkProp_a<LatticeFermion,multi1d<LatticeColorMatrix>,multi1d<LatticeColorMatrix>,
+                        EvenOddPrecDWFermActBaseArray>(
+                                                       q_sol, 
+                                                       xml_out, 
+                                                       q_src, 
+                                                       t_src, 
+                                                       j_decay, 
+                                                       S_f, 
+                                                       state,
+                                                       invParam,
+                                                       ncg_had);
+    }
 
 }

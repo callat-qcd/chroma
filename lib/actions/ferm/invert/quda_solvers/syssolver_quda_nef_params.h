@@ -16,24 +16,27 @@ namespace Chroma
     struct SysSolverQUDANEFParams { 
         SysSolverQUDANEFParams(XMLReader& xml, const std::string& path);
         SysSolverQUDANEFParams() {
-            solverType=CG;
-            cudaPrecision=DEFAULT;
-            cudaReconstruct=RECONS_12;
-            cudaSloppyPrecision=DEFAULT;
-            cudaSloppyReconstruct=RECONS_12;
-            cudaPreconditionPrecision=DEFAULT;
-            cudaPreconditionReconstruct=RECONS_12;
-            asymmetricP = false; //< Use asymmetric version of the linear operator
-            axialGaugeP = false; //< Fix Axial Gauge?
-            SilentFailP = false; //< If set to true ignore lack of convergence. Default is 'loud' 
-            RsdToleranceFactor = Real(10); //< Tolerate if the solution achived is better (less) than rsdToleranceFactor*RsdTarget
-            tuneDslashP = false ; //< v0.3 autotune feature
-            verboseP = false;
-            innerParamsP = false;
-            backup_invP = false;
-            dump_on_failP = false;
-            cgnrP=false;
-            InvDeflate=false;
+            solverType                  = CG;
+            cudaPrecision               = DEFAULT;
+            cudaReconstruct             = RECONS_12;
+            cudaSloppyPrecision         = DEFAULT;
+            cudaSloppyReconstruct       = RECONS_12;
+            cudaPreconditionPrecision   = DEFAULT;
+            cudaPreconditionReconstruct = RECONS_12;
+            RsdToleranceFactor          = Real(10); //< Tolerate if the solution achived is better (less) than rsdToleranceFactor*RsdTarget
+            asymmetricP     = false; //< Use asymmetric version of the linear operator
+            axialGaugeP     = false; //< Fix Axial Gauge?
+            SilentFailP     = false; //< If set to true ignore lack of convergence. Default is 'loud' 
+            tuneDslashP     = false; //< v0.3 autotune feature
+            verboseP        = false;
+            innerParamsP    = false;
+            backup_invP     = false;
+            dump_on_failP   = false;
+            cgnrP           = false;
+            InvDeflate      = false;
+            checkSolution   = false;
+            MatPCType       = ODD_ODD_ASYM; // change me to ODD_ODD when supported
+            MatSolutionType = MATPC;        // change me to MAT when supported
         };
 
         SysSolverQUDANEFParams( const SysSolverQUDANEFParams& p) {
@@ -61,6 +64,9 @@ namespace Chroma
             backup_inv_param = p.backup_inv_param;
             dump_on_failP = p.dump_on_failP;
             cgnrP= p.cgnrP;
+            checkSolution   = p.checkSolution;
+            MatPCType       = p.MatPCType;
+            MatSolutionType = p.MatSolutionType;
             // Do deflation?
             InvDeflate= p.InvDeflate;
             if ( InvDeflate ) {
@@ -71,6 +77,7 @@ namespace Chroma
 
         // Original NEF params
         NEFFermActParams NEFParams;
+        bool checkSolution;
         bool AntiPeriodicT;
         int  MaxIter;
         Real RsdTarget;
@@ -89,6 +96,10 @@ namespace Chroma
         QudaReconsType    cudaSloppyReconstruct;
         QudaPrecisionType cudaPreconditionPrecision;
         QudaReconsType    cudaPreconditionReconstruct;
+
+        //
+        ChromaQudaMatPCType       MatPCType;
+        ChromaQudaMatSolutionType MatSolutionType;
 
         // Deflate?
         bool InvDeflate;

@@ -80,7 +80,8 @@ namespace Chroma
         lost_timer.start();
         for(unsigned int s=0; s<quda_inv_param.Ls; s++)
             {
-                memcpy(reinterpret_cast<char*>(&spinorIn[fermsize*s]),reinterpret_cast<char*>(const_cast<REAL*>(&(chi_s[s].elem(rb[1].start()).elem(0).elem(0).real()))),fermsize*sizeof(REAL));
+                memcpy(reinterpret_cast<char*>(&spinorIn[fermsize*s]), 
+                       reinterpret_cast<char*>(const_cast<REAL*>(&(chi_s[s].elem(rb[1].start()).elem(0).elem(0).real()))),fermsize*sizeof(REAL));
             }
         lost_timer.stop();
         lost_time = lost_timer.getTimeInSeconds();
@@ -109,7 +110,8 @@ namespace Chroma
         for(unsigned int s=0; s<quda_inv_param.Ls; s++)
             {
                 //     memset(reinterpret_cast<char*>(&(psi_s[s].elem(all.start()).elem(0).elem(0).real())),0,fermsize*2*sizeof(REAL));
-                memcpy(reinterpret_cast<char*>(const_cast<REAL*>(&(psi_s[s].elem(rb[1].start()).elem(0).elem(0).real()))),reinterpret_cast<char*>(&spinorOut[fermsize*s]),fermsize*sizeof(REAL));
+                memcpy(reinterpret_cast<char*>(const_cast<REAL*>(&(psi_s[s].elem(rb[1].start()).elem(0).elem(0).real()))),
+                       reinterpret_cast<char*>(&spinorOut[fermsize*s]),fermsize*sizeof(REAL));
             }
         lost_timer.stop();
         lost_time = lost_timer.getTimeInSeconds();
