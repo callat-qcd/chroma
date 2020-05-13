@@ -168,7 +168,7 @@ namespace Chroma
     }
 
     // Call inverter
-    // psi = M^(-1) psi
+    // psi = M^(-1) chi
     SystemSolverResults_t res = (*invA)(psi, chi_tmp);
   
     /* Step (ii) */

@@ -11,9 +11,9 @@
 #include <string>
 #include "handle.h"
 
-namespace Chroma 
+namespace Chroma
 {
-    struct SysSolverQUDANEFParams { 
+    struct SysSolverQUDANEFParams {
         SysSolverQUDANEFParams(XMLReader& xml, const std::string& path);
         SysSolverQUDANEFParams() {
             solverType                  = CG;
@@ -26,7 +26,7 @@ namespace Chroma
             RsdToleranceFactor          = Real(10); //< Tolerate if the solution achived is better (less) than rsdToleranceFactor*RsdTarget
             asymmetricP     = false; //< Use asymmetric version of the linear operator
             axialGaugeP     = false; //< Fix Axial Gauge?
-            SilentFailP     = false; //< If set to true ignore lack of convergence. Default is 'loud' 
+            SilentFailP     = false; //< If set to true ignore lack of convergence. Default is 'loud'
             tuneDslashP     = false; //< v0.3 autotune feature
             verboseP        = false;
             innerParamsP    = false;
@@ -40,33 +40,33 @@ namespace Chroma
         };
 
         SysSolverQUDANEFParams( const SysSolverQUDANEFParams& p) {
-            NEFParams = p.NEFParams;
+            NEFParams     = p.NEFParams;
             AntiPeriodicT = p.AntiPeriodicT;
-            MaxIter = p.MaxIter;
-            RsdTarget = p.RsdTarget;
-            Delta = p.Delta;
-            solverType = p.solverType;
-            verboseP = p.verboseP;
-            asymmetricP = p.asymmetricP;
-            cudaPrecision = p.cudaPrecision;
-            cudaReconstruct = p.cudaReconstruct;
-            cudaSloppyPrecision = p.cudaSloppyPrecision;
-            cudaSloppyReconstruct = p.cudaSloppyReconstruct;
-            cudaPreconditionPrecision=p.cudaPreconditionPrecision;
-            cudaPreconditionReconstruct=p.cudaPreconditionReconstruct;
-            axialGaugeP = p.axialGaugeP;
-            SilentFailP = p.SilentFailP;
+            MaxIter       = p.MaxIter;
+            RsdTarget     = p.RsdTarget;
+            Delta         = p.Delta;
+            solverType    = p.solverType;
+            verboseP      = p.verboseP;
+            asymmetricP   = p.asymmetricP;
+            cudaPrecision              = p.cudaPrecision;
+            cudaReconstruct            = p.cudaReconstruct;
+            cudaSloppyPrecision        = p.cudaSloppyPrecision;
+            cudaSloppyReconstruct      = p.cudaSloppyReconstruct;
+            cudaPreconditionPrecision  = p.cudaPreconditionPrecision;
+            cudaPreconditionReconstruct= p.cudaPreconditionReconstruct;
+            axialGaugeP        = p.axialGaugeP;
+            SilentFailP        = p.SilentFailP;
             RsdToleranceFactor = p.RsdToleranceFactor;
-            tuneDslashP = p.tuneDslashP;
-            innerParamsP = p.innerParamsP;
-            innerParams = p.innerParams;
-            backup_invP = p.backup_invP;
-            backup_inv_param = p.backup_inv_param;
-            dump_on_failP = p.dump_on_failP;
-            cgnrP= p.cgnrP;
-            checkSolution   = p.checkSolution;
-            MatPCType       = p.MatPCType;
-            MatSolutionType = p.MatSolutionType;
+            tuneDslashP        = p.tuneDslashP;
+            innerParamsP       = p.innerParamsP;
+            innerParams        = p.innerParams;
+            backup_invP        = p.backup_invP;
+            backup_inv_param   = p.backup_inv_param;
+            dump_on_failP      = p.dump_on_failP;
+            cgnrP              = p.cgnrP;
+            checkSolution      = p.checkSolution;
+            MatPCType          = p.MatPCType;
+            MatSolutionType    = p.MatSolutionType;
             // Do deflation?
             InvDeflate= p.InvDeflate;
             if ( InvDeflate ) {
@@ -106,22 +106,22 @@ namespace Chroma
         //Lanczos Params
         //Handle<LanczosParams> NEFLanczosParams;
         LanczosParams NEFLanczosParams;
-	
+
         // GCR Specific params
         // Params for the preconditioner
         Handle<GCRInnerSolverParams> innerParams;
 
         // XML for Backup Solver
-        bool backup_invP;
+        bool       backup_invP;
         GroupXML_t backup_inv_param;
-        bool dump_on_failP;
-        bool cgnrP;    
+        bool       dump_on_failP;
+        bool       cgnrP;
 
     };
 
     void read(XMLReader& xml, const std::string& path, SysSolverQUDANEFParams& p);
 
-    void write(XMLWriter& xml, const std::string& path, 
+    void write(XMLWriter& xml, const std::string& path,
                const SysSolverQUDANEFParams& param);
 
 
@@ -129,5 +129,3 @@ namespace Chroma
 }
 
 #endif
-
-

@@ -9,7 +9,7 @@ using namespace QDP;
 
 namespace Chroma {
 
-    SysSolverQUDANEFParams::SysSolverQUDANEFParams(XMLReader& xml, 
+    SysSolverQUDANEFParams::SysSolverQUDANEFParams(XMLReader& xml,
                                                    const std::string& path)
     {
         XMLReader paramtop(xml, path);
@@ -20,7 +20,7 @@ namespace Chroma {
         read(paramtop, "AntiPeriodicT", AntiPeriodicT);
 
         read(paramtop, "Delta", Delta);
-  
+
 
         read(paramtop, "SolverType", solverType);
 
@@ -45,29 +45,29 @@ namespace Chroma {
             MatSolutionType = MATPC; // change me to MAT when chroma supports all
         }
 
-        if ( paramtop.count("Verbose") > 0 ) { 
+        if ( paramtop.count("Verbose") > 0 ) {
             read(paramtop, "Verbose", verboseP);
         }
-        else { 
+        else {
             verboseP = false;
         }
-        if ( paramtop.count("AsymmetricLinop") > 0 ) { 
+        if ( paramtop.count("AsymmetricLinop") > 0 ) {
             read(paramtop, "AsymmetricLinop", asymmetricP);
         }
-        else { 
-            asymmetricP = false; // Symmetric is default 
+        else {
+            asymmetricP = false; // Symmetric is default
         }
 
         if( paramtop.count("CudaPrecision") > 0 ) {
             read(paramtop, "CudaPrecision", cudaPrecision);
         }
-        else { 
+        else {
             cudaPrecision = DEFAULT;
         }
         if( paramtop.count("CudaReconstruct") > 0 ) {
             read(paramtop, "CudaReconstruct", cudaReconstruct);
         }
-        else { 
+        else {
             cudaReconstruct = RECONS_12;
         }
 
@@ -75,14 +75,14 @@ namespace Chroma {
         if( paramtop.count("CudaSloppyPrecision") > 0 ) {
             read(paramtop, "CudaSloppyPrecision", cudaSloppyPrecision);
         }
-        else { 
+        else {
             cudaSloppyPrecision = DEFAULT;
         }
 
         if( paramtop.count("CudaSloppyReconstruct") > 0 ) {
             read(paramtop, "CudaSloppyReconstruct", cudaSloppyReconstruct);
         }
-        else { 
+        else {
             cudaSloppyReconstruct = RECONS_12;
         }
         // Precondition params
@@ -103,28 +103,28 @@ namespace Chroma {
         if( paramtop.count("AxialGaugeFix") > 0 ) {
             read(paramtop, "AxialGaugeFix", axialGaugeP);
         }
-        else { 
+        else {
             axialGaugeP = false;
         }
 
         if( paramtop.count("SilentFail") > 0) {
             read(paramtop, "SilentFail", SilentFailP);
         }
-        else { 
+        else {
             SilentFailP = false;
         }
 
-        if( paramtop.count("RsdToleranceFactor") > 0 ) { 
+        if( paramtop.count("RsdToleranceFactor") > 0 ) {
             read(paramtop, "RsdToleranceFactor", RsdToleranceFactor);
         }
-        else { 
+        else {
             RsdToleranceFactor = Real(10); // Tolerate an order of magnitude difference by default.
         }
 
-        if( paramtop.count("AutotuneDslash") > 0 ) { 
+        if( paramtop.count("AutotuneDslash") > 0 ) {
             read(paramtop, "AutotuneDslash", tuneDslashP);
         }
-        else { 
+        else {
             tuneDslashP = false;
         }
         QDPIO::cout << "tuneDslasP = " << tuneDslashP << std::endl;
@@ -134,32 +134,32 @@ namespace Chroma {
             innerParams = new GCRInnerSolverParams(paramtop, "./GCRInnerParams");
             innerParamsP = true;
         }
-        else { 
+        else {
             innerParamsP = false;
         }
 
-        if ( paramtop.count("BackupSolverParam") > 0 ) { 
+        if ( paramtop.count("BackupSolverParam") > 0 ) {
             // If user specified a backup solver, let's read it
             backup_invP = true;
             backup_inv_param = readXMLGroup(paramtop, "./BackupSolverParam", "invType");
         }
-        else { 
+        else {
             // No backup
             backup_invP = false;
             backup_inv_param.xml = "";
         }
 
-        if ( paramtop.count("DumpOnFail") > 0 ) { 
+        if ( paramtop.count("DumpOnFail") > 0 ) {
             read(paramtop, "DumpOnFail", dump_on_failP);
         }
-        else { 
+        else {
             dump_on_failP  = false;
         }
-   
-        if ( paramtop.count("DoCGNR")  > 0 ) { 
+
+        if ( paramtop.count("DoCGNR")  > 0 ) {
             read(paramtop, "DoCGNR", cgnrP);
         }
-        else { 
+        else {
             cgnrP = false ; // Do CGNE by default
         }
         if( paramtop.count("NEFLanczosParams") > 0 ) {
@@ -167,7 +167,7 @@ namespace Chroma {
             //NEFLanczosParams = new LanczosParams(paramtop, "./NEFLanczosParams");
             InvDeflate = true;
         }
-        else { 
+        else {
             InvDeflate = false;
         }
 
@@ -175,51 +175,50 @@ namespace Chroma {
 
     }
 
-    void read(XMLReader& xml, const std::string& path, 
+    void read(XMLReader& xml, const std::string& path,
               SysSolverQUDANEFParams& p)
     {
         SysSolverQUDANEFParams tmp(xml, path);
         p = tmp;
     }
 
-    void write(XMLWriter& xml, const std::string& path, 
+    void write(XMLWriter& xml, const std::string& path,
                const SysSolverQUDANEFParams& p) {
         push(xml, path);
-        write(xml, "MaxIter", p.MaxIter);
-        write(xml, "RsdTarget", p.RsdTarget);
-        write(xml, "NEFParams", p.NEFParams);
-        write(xml, "AntiPeriodicT", p.AntiPeriodicT);
-        write(xml, "Delta", p.Delta);
-        write(xml, "SolverType", p.solverType);
-        write(xml, "Verbose", p.verboseP);
-        write(xml, "AsymmetricLinop", p.asymmetricP);
-        write(xml, "CudaPrecision", p.cudaPrecision);
-        write(xml, "CudaReconstruct", p.cudaReconstruct);
-        write(xml, "CudaSloppyPrecision", p.cudaSloppyPrecision);
-        write(xml, "CudaSloppyReconstruct", p.cudaSloppyReconstruct);
-        write(xml, "CudaPreconditionPrecision", p.cudaPreconditionPrecision);
+        write(xml, "MaxIter"                    , p.MaxIter);
+        write(xml, "RsdTarget"                  , p.RsdTarget);
+        write(xml, "NEFParams"                  , p.NEFParams);
+        write(xml, "AntiPeriodicT"              , p.AntiPeriodicT);
+        write(xml, "Delta"                      , p.Delta);
+        write(xml, "SolverType"                 , p.solverType);
+        write(xml, "Verbose"                    , p.verboseP);
+        write(xml, "AsymmetricLinop"            , p.asymmetricP);
+        write(xml, "CudaPrecision"              , p.cudaPrecision);
+        write(xml, "CudaReconstruct"            , p.cudaReconstruct);
+        write(xml, "CudaSloppyPrecision"        , p.cudaSloppyPrecision);
+        write(xml, "CudaSloppyReconstruct"      , p.cudaSloppyReconstruct);
+        write(xml, "CudaPreconditionPrecision"  , p.cudaPreconditionPrecision);
         write(xml, "CudaPreconditionReconstruct", p.cudaPreconditionReconstruct);
-        write(xml, "AxialGaugeFix", p.axialGaugeP);
-        write(xml, "SilentFail", p.SilentFailP);
-        write(xml, "RsdToleranceFactor", p.RsdToleranceFactor);
-        write(xml, "checkSolution",   p.checkSolution);
-        write(xml, "MatPCType",       p.MatPCType);
-        write(xml, "MatSolutionType", p.MatSolutionType);
-
-        write(xml, "AutotuneDslash", p.tuneDslashP);
-        if( p.innerParamsP ) { 
-            write(xml, "GCRInnerParams", *(p.innerParams));
+        write(xml, "AxialGaugeFix"              , p.axialGaugeP);
+        write(xml, "SilentFail"                 , p.SilentFailP);
+        write(xml, "RsdToleranceFactor"         , p.RsdToleranceFactor);
+        write(xml, "checkSolution"              , p.checkSolution);
+        write(xml, "MatPCType"                  , p.MatPCType);
+        write(xml, "MatSolutionType"            , p.MatSolutionType);
+        write(xml, "AutotuneDslash"             , p.tuneDslashP);
+        if( p.innerParamsP ) {
+            write(xml, "GCRInnerParams"         , *(p.innerParams));
         }
 
-        write(xml, "DumpOnFail", p.dump_on_failP);
-        write(xml, "DoCGNR", p.cgnrP );
+        write(xml, "DumpOnFail"                 , p.dump_on_failP);
+        write(xml, "DoCGNR"                     , p.cgnrP );
 
         // If we added LanczosParams, InvDeflate is set to true
         if ( p.InvDeflate ) {
-            write(xml, "NEFLanczosParams", p.NEFLanczosParams);
+            write(xml, "NEFLanczosParams"       , p.NEFLanczosParams);
         }
 
-        if( p.backup_invP ) { 
+        if( p.backup_invP ) {
             // Need to dump out the XML for the back up solver here...
             // Turn XML into an std::istringstream
             std::istringstream is( p.backup_inv_param.xml);

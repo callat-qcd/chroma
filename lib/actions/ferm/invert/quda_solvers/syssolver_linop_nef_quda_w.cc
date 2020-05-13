@@ -1,6 +1,6 @@
 /*! \file
- *  \brief Solve a MdagM*psi=chi linear system by CG2
- */
+*  \brief Solve a MdagM*psi=chi linear system by CG2
+*/
 
 #include "actions/ferm/invert/syssolver_linop_factory.h"
 #include "actions/ferm/invert/syssolver_linop_aggregate.h"
@@ -32,11 +32,11 @@ namespace Chroma
             bool registered = false;
         }
 
-        LinOpSystemSolverArray<LatticeFermion>* createFerm(XMLReader& xml_in,
-                                                           const std::string& path,
-                                                           Handle< FermState< LatticeFermion, multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> > > state,
-
-                                                           Handle< LinearOperatorArray<LatticeFermion> > A)
+        LinOpSystemSolverArray<LatticeFermion>* 
+            createFerm(XMLReader& xml_in,
+                       const std::string& path,
+                       Handle< FermState< LatticeFermion, multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> > > state,
+                       Handle< LinearOperatorArray<LatticeFermion> > A)
         {
             return new LinOpSysSolverQUDANEF(A, state,SysSolverQUDANEFParams(xml_in, path));
         }
@@ -46,10 +46,10 @@ namespace Chroma
         {
             bool success = true;
             if (! registered)
-                {
-                    success &= Chroma::TheLinOpFermSystemSolverArrayFactory::Instance().registerObject(name, createFerm);
-                    registered = true;
-                }
+            {
+                success &= Chroma::TheLinOpFermSystemSolverArrayFactory::Instance().registerObject(name, createFerm);
+                registered = true;
+            }
             return success;
         }
     }
@@ -58,34 +58,29 @@ namespace Chroma
     {
         SystemSolverResults_t ret;
 
-        //size of field to copy. it is only half the field, since preconditioning is running
+        //size of field to copy. If we do a MAT solution, need full size, else, half
         const multi1d<int>& latdims = Layout::subgridLattSize();
-        int halfsize=latdims[0]*latdims[1]*latdims[2]*latdims[3]/2;
-        int fermsize=halfsize*Nc*Ns*2;
+        //            complex * Nc * Ns * V4
+        int fermsize = 2 * Nc * Ns * latdims[0]*latdims[1]*latdims[2]*latdims[3];
+        if(quda_inv_param.solution_type == QUDA_MATPC_SOLUTION){
+            fermsize = fermsize / 2;
+        }
 
         REAL* spinorIn = new REAL[quda_inv_param.Ls*fermsize];
         REAL* spinorOut = new REAL[quda_inv_param.Ls*fermsize];
 
-        double lost_time;
-        StopWatch lost_timer;
-        lost_timer.start();
+        double lost_time;// to try and track down missing solver time between QUDA and Chroma
+
         memset(reinterpret_cast<char*>(spinorIn), 0, fermsize*quda_inv_param.Ls*sizeof(REAL));
         memset(reinterpret_cast<char*>(spinorOut), 0, fermsize*quda_inv_param.Ls*sizeof(REAL));
-        lost_timer.stop();
-        lost_time = lost_timer.getTimeInSeconds();
-        QDPIO::cout << "LOST TIME C: memset = " << lost_time << " seconds" << std::endl;
 
         //copy negative parity
 #ifndef BUILD_QUDA_DEVIFACE_SPINOR
-        lost_timer.start();
         for(unsigned int s=0; s<quda_inv_param.Ls; s++)
             {
-                memcpy(reinterpret_cast<char*>(&spinorIn[fermsize*s]), 
-                       reinterpret_cast<char*>(const_cast<REAL*>(&(chi_s[s].elem(rb[1].start()).elem(0).elem(0).real()))),fermsize*sizeof(REAL));
+                memcpy(reinterpret_cast<char*>(&spinorIn[fermsize*s]),
+                       reinterpret_cast<char*>(const_cast<REAL*>(&(chi_s[s].elem(start_site).elem(0).elem(0).real()))),fermsize*sizeof(REAL));
             }
-        lost_timer.stop();
-        lost_time = lost_timer.getTimeInSeconds();
-        QDPIO::cout << "LOST TIME C: memcpy = " << lost_time << " seconds" << std::endl;
 #else
         //not yet
         //for(unsigned int s=0; s<quda_inv_param.Ls; s++){
@@ -102,20 +97,16 @@ namespace Chroma
         swatch1.stop();
 
         //copy result
-        lost_timer.start();
         psi_s.resize(quda_inv_param.Ls);
         psi_s = zero;
 
 #ifndef BUILD_QUDA_DEVIFACE_SPINOR
         for(unsigned int s=0; s<quda_inv_param.Ls; s++)
-            {
-                //     memset(reinterpret_cast<char*>(&(psi_s[s].elem(all.start()).elem(0).elem(0).real())),0,fermsize*2*sizeof(REAL));
-                memcpy(reinterpret_cast<char*>(const_cast<REAL*>(&(psi_s[s].elem(rb[1].start()).elem(0).elem(0).real()))),
-                       reinterpret_cast<char*>(&spinorOut[fermsize*s]),fermsize*sizeof(REAL));
-            }
-        lost_timer.stop();
-        lost_time = lost_timer.getTimeInSeconds();
-        QDPIO::cout << "LOST TIME C: memcpy solution = " << lost_time << " seconds" << std::endl;
+        {
+            //     memset(reinterpret_cast<char*>(&(psi_s[s].elem(all.start()).elem(0).elem(0).real())),0,fermsize*2*sizeof(REAL));
+            memcpy(reinterpret_cast<char*>(const_cast<REAL*>(&(psi_s[s].elem(start_site).elem(0).elem(0).real()))),
+                   reinterpret_cast<char*>(&spinorOut[fermsize*s]),fermsize*sizeof(REAL));
+        }
 #else
         //not yet implemented
         //for(unsigned int s=0; s<quda_inv_param.Ls; s++){
@@ -127,8 +118,18 @@ namespace Chroma
         //clean up
         delete [] spinorIn;
         delete [] spinorOut;
-        QDPIO::cout << "Norm2 psi = " << norm2(psi_s, rb[1])  << std::endl;
 
+        if ( quda_inv_param.solution_type == QUDA_MATPC_SOLUTION ){
+            if ( quda_inv_param.matpc_type == QUDA_MATPC_ODD_ODD_ASYMMETRIC || quda_inv_param.matpc_type == QUDA_MATPC_ODD_ODD ){
+                QDPIO::cout << "Norm2 psi = " << norm2(psi_s, rb[1])  << std::endl;
+            }
+            else if (quda_inv_param.matpc_type == QUDA_MATPC_EVEN_EVEN_ASYMMETRIC || quda_inv_param.matpc_type == QUDA_MATPC_EVEN_EVEN){
+                QDPIO::cout << "Norm2 psi = " << norm2(psi_s, rb[0])  << std::endl;
+            }
+        }
+        else if ( quda_inv_param.solution_type == QUDA_MAT_SOLUTION ){
+            QDPIO::cout << "Norm2 psi = " << norm2(psi_s)  << std::endl;
+        }
         QDPIO::cout << "QUDA_" << solver_string << "_NEF_SOLVER: time=" << quda_inv_param.secs << " s" ;
         QDPIO::cout << "\tPerformance="<<  quda_inv_param.gflops/quda_inv_param.secs<<" GFLOPS" ;
         QDPIO::cout << "\tTotal Time (incl. load gauge)=" << swatch1.getTimeInSeconds() <<" s"<<std::endl;
