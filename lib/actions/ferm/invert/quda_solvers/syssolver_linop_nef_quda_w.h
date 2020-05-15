@@ -592,10 +592,10 @@ namespace Chroma
                 //int halfsize=latdims[0]*latdims[1]*latdims[2]*latdims[3]/2;
                 int fermsize= Nc*Ns*2 * tmp_dims[0]*tmp_dims[1]*tmp_dims[2]*tmp_dims[3]/2;
 
-                // In1 is input to Chroma, Out1 is result
+                // In1 is input to QUDA, Out1 is result
                 multi1d<T> in1( this->size() );
                 multi1d<T> out1(this->size() );
-                // In2 is input to QUDA, Out2 is result
+                // In2 is input to Chroma, Out2 is result
                 multi1d<T> in2( this->size() );
                 multi1d<T> out2(this->size() );
 
@@ -608,7 +608,7 @@ namespace Chroma
                         out1[s]=zero;   // zero both out1 and out2
                         out2[s]=zero;
                     }
-                    if ( d==0 ) {
+                    if ( d==0 ) {//Chroma
                         // Apply A to in2
                         QDPIO::cout << "Doing Mat" << std::endl;
                         (*A)(out2, in2, PLUS);
@@ -636,26 +636,24 @@ namespace Chroma
                         MatQuda((void *)spinorOut, (void *)spinorIn, (QudaInvertParam*)&quda_inv_param);
                     }
                     for(unsigned int s=0; s<quda_inv_param.Ls; s++){
-                        //      memset(reinterpret_cast<char*>(&(psi_s[s].elem(all.start()).elem(0).elem(0).real())),0,fermsize*2*sizeof(REAL));
                         memcpy((&out1[s].elem(rb[1].start()).elem(0).elem(0).real()),(&spinorOut[fermsize*s]),fermsize*sizeof(REAL));
                     }
-                    // Reset quda_inv_param.dagger
-                    quda_inv_param.dagger = QUDA_DAG_NO;
-
                     // Now compare out1 and out2
                     for(int s=0; s < this->size();s++) {
                         out1[s] *= invTwoKappaB;
 
-                        QDPIO::cout << "QUDA[" <<s << "] = " << norm2(out2[s]) 
-                                    << "  Chroma[" <<s << "] = " << norm2(out1[s]) 
-                                    << "  QUDA/Chroma[" <<s << "] = " << norm2(out2[s]) / norm2(out1[s]) <<std::endl;
+                        QDPIO::cout << "QUDA[" <<s << "] = " << norm2(out1[s]) 
+                                    << "  Chroma[" <<s << "] = " << norm2(out2[s]) 
+                                    << "  QUDA/Chroma[" <<s << "] = " << norm2(out1[s]) / norm2(out2[s]) <<std::endl;
                         //QDPIO::cout << "s=" << s << "  diff=" << norm2(out2[s]-out1[s]) << std::endl;
                     }
 
                     delete [] spinorIn;
                     delete [] spinorOut;
-                }
-            }
+                }// D D^dagger loop
+                // Reset quda_inv_param.dagger
+                quda_inv_param.dagger = QUDA_DAG_NO;
+            }// original test
 
             // New test with MAT solution
             {
@@ -665,11 +663,22 @@ namespace Chroma
                 if ( ! quda_returns_mat){
                     fermsize = fermsize / 2.;
                 }
-                
-                // In1 is input to Chroma, Out1 is result
+
+                // Set operator as MAT or MATPC based on size of sub_domain
+                if ( sub_domain.numSiteTable() == Layout::sitesOnNode() ) {
+                    QDPIO::cout << "Using NORMOP / NORMERR for comparison" << std::endl;
+                    if( invParam.cgnrP ) { quda_inv_param.solve_type = QUDA_NORMOP_SOLVE;}
+                    else { quda_inv_param.solve_type = QUDA_NORMERR_SOLVE;}
+                }
+                else{
+                    QDPIO::cout << "Using NORMOP_PC / NORMERR_PC for comparison" << std::endl;
+                    // no need to set this as it is the solve_type requested
+                }
+
+                // In1 is input to QUDA, Out1 is result
                 multi1d<T> in1( this->size() );
                 multi1d<T> out1(this->size() );            
-                // In2 is input to QUDA, Out2 is result
+                // In2 is input to Chroma, Out2 is result
                 multi1d<T> in2( this->size() );
                 multi1d<T> out2(this->size() );
             
@@ -682,7 +691,7 @@ namespace Chroma
                         out1[s]=zero;   // zero both out1 and out2
                         out2[s]=zero;
                     }                    
-                    if ( d==0 ) {
+                    if ( d==0 ) {//Chroma
                         // Apply A to in2
                         QDPIO::cout << "Doing Mat" << std::endl;
                         (*A)(out2, in2, PLUS);
@@ -711,25 +720,28 @@ namespace Chroma
                     }
                     
                     for(unsigned int s=0; s<quda_inv_param.Ls; s++){
-                        //      memset(reinterpret_cast<char*>(&(psi_s[s].elem(all.start()).elem(0).elem(0).real())),0,fermsize*2*sizeof(REAL));
                         memcpy((&out1[s].elem(start_site).elem(0).elem(0).real()),(&spinorOut[fermsize*s]),fermsize*sizeof(REAL));
                     }
-                    // Reset quda_inv_param.dagger
-                    quda_inv_param.dagger = QUDA_DAG_NO;
-
                     // Now compare out1 and out2
                     for(int s=0; s < this->size();s++) {
                         out1[s] *= invTwoKappaB;
                         
-                        QDPIO::cout << "QUDA[" <<s << "] = " << norm2(out2[s]) 
-                                    << "  Chroma[" <<s << "] = " << norm2(out1[s]) 
-                                    << "  QUDA/Chroma[" <<s << "] = " << norm2(out2[s]) / norm2(out1[s]) <<std::endl;
+                        QDPIO::cout << "QUDA[" <<s << "] = " << norm2(out1[s])
+                                    << "  Chroma[" <<s << "] = " << norm2(out2[s])
+                                    << "  QUDA/Chroma[" <<s << "] = " << norm2(out1[s]) / norm2(out2[s]) <<std::endl;
                     }
                     
                     delete [] spinorIn;
                     delete [] spinorOut;
-                }
-            }
+                }// D D^dagger loop
+                // Reset quda_inv_param params
+                quda_inv_param.dagger = QUDA_DAG_NO;
+                if ( sub_domain.numSiteTable() == Layout::sitesOnNode() ) {
+                    QDPIO::cout << "Restoring NORMOP_PC / NORMERR_PC for solve" << std::endl;
+                    if( invParam.cgnrP ) { quda_inv_param.solve_type = QUDA_NORMOP_PC_SOLVE;}
+                    else { quda_inv_param.solve_type = QUDA_NORMERR_PC_SOLVE;}
+                }// if NORMOP_PC is used in test, no need to restore as that is what we want
+            }// New test
             }
 #endif
 
@@ -778,12 +790,22 @@ namespace Chroma
                 Ax=zero;
                 Double r_norm(zero);
                 Double b_norm(zero);
+                Double r_norm_s(zero);
+                Double b_norm_s(zero);
                 (*A)(Ax, psi, PLUS);
                 for(int s=0; s < A->size(); s++)
                     {
                         r[s][sub_domain] = chi[s] - Ax[s];
-                        r_norm += norm2(r[s],   sub_domain);
-                        b_norm += norm2(chi[s], sub_domain);
+                        r_norm_s = norm2(r[s],   sub_domain);
+                        b_norm_s = norm2(chi[s], sub_domain);
+                        r_norm += r_norm_s;
+                        b_norm += b_norm_s;
+                        if ( quda_returns_mat ){
+                            QDPIO::cout << "NOTE: with MAT solution, sources are ZERO in 5th dimension bulk" << std::endl;
+                        }
+                        QDPIO::cout << " | r[" << s <<"] | = " << sqrt(r_norm_s)
+                                    << " |r|/|b|[" <<s<< "] = " << sqrt(r_norm_s)/sqrt(b_norm_s)
+                                    << std::endl;
                     }
 
                 Double resid = sqrt(r_norm);
