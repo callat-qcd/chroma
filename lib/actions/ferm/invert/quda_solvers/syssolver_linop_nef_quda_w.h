@@ -428,8 +428,14 @@ namespace Chroma
             }
 
             quda_inv_param.dagger                 = QUDA_DAG_NO;
-            quda_inv_param.mass_normalization     = QUDA_KAPPA_NORMALIZATION;
-            QDPIO::cout << "Using KAPPA Normalization" << std::endl;
+            if ( invParam.massNorm ) {
+                quda_inv_param.mass_normalization     = QUDA_MASS_NORMALIZATION;
+                QDPIO::cout << "Using MASS Normalization" << std::endl;
+            }
+            else {
+                quda_inv_param.mass_normalization     = QUDA_KAPPA_NORMALIZATION;
+                QDPIO::cout << "Using KAPPA Normalization" << std::endl;
+            }
             quda_inv_param.cpu_prec               = cpu_prec;
             quda_inv_param.cuda_prec              = gpu_prec;
             quda_inv_param.cuda_prec_sloppy       = gpu_sloppy_prec;
@@ -580,10 +586,15 @@ namespace Chroma
             // 1/( 2 kappa_b ) =  b5 * ( Nd - M5 ) + 1
             Real invTwoKappaB = invParam.NEFParams.b5[0]*( Nd - invParam.NEFParams.OverMass) + Real(1);
             Real twoKappaB = Real(1)/invTwoKappaB;
-
+            // Make note about normalizations
+            Double invTwoKappaBQuda = Nd - invParam.NEFParams.OverMass + 1.;
+            Double twoKappaBQuda    = 1./invTwoKappaBQuda;
 #if 1 
             {
-            if( !quda_returns_mat ){
+                // Set Kappa since QUDA MatQuda used in test code does not call massRescale to set this parameter
+                quda_inv_param.kappa = 0.5 * toDouble(twoKappaBQuda);
+
+                if( !quda_returns_mat ){
                 // Test code.... ONLY for PRECONDITIONED TYPE
                 // we explicitly left rb[1] in here to preserve the original check
                 // still passes if driven with new code but MATPC and ODD_ODD_ASYM selected
@@ -639,9 +650,14 @@ namespace Chroma
                         memcpy((&out1[s].elem(rb[1].start()).elem(0).elem(0).real()),(&spinorOut[fermsize*s]),fermsize*sizeof(REAL));
                     }
                     // Now compare out1 and out2
+                    QDPIO::cout << "compare nomr2 of operators" << std::endl;
                     for(int s=0; s < this->size();s++) {
+                        // QUDA to Chroma normalization
                         out1[s] *= invTwoKappaB;
-
+                        // MASS normalization
+                        if ( invParam.massNorm ) {
+                            out1[s] *= twoKappaBQuda * twoKappaBQuda;
+                        }
                         QDPIO::cout << "QUDA[" <<s << "] = " << norm2(out1[s]) 
                                     << "  Chroma[" <<s << "] = " << norm2(out2[s]) 
                                     << "  QUDA/Chroma[" <<s << "] = " << norm2(out1[s]) / norm2(out2[s]) <<std::endl;
@@ -722,11 +738,23 @@ namespace Chroma
                     for(unsigned int s=0; s<quda_inv_param.Ls; s++){
                         memcpy((&out1[s].elem(start_site).elem(0).elem(0).real()),(&spinorOut[fermsize*s]),fermsize*sizeof(REAL));
                     }
-                    // Now compare out1 and out2
+                    // Now compare out1 (QUDA) and out2 (Chroma)
+                    // QUDA MatQuda does NOT use massRescale which sets kappa for us
+                    //      therefore, we have to 
+                    QDPIO::cout << "compare nomr2 of operators" << std::endl;
                     for(int s=0; s < this->size();s++) {
+                        // QUDA to Chroma normalization
                         out1[s] *= invTwoKappaB;
-                        
-                        QDPIO::cout << "QUDA[" <<s << "] = " << norm2(out1[s])
+                        // MASS normalization
+                       if ( invParam.massNorm ) {
+                            if ( ! quda_returns_mat ) {
+                                out1[s] *= twoKappaBQuda * twoKappaBQuda;
+                            }
+                            else {
+                                out1[s] *= twoKappaBQuda;
+                            }
+                       }
+                       QDPIO::cout << "QUDA[" <<s << "] = " << norm2(out1[s])
                                     << "  Chroma[" <<s << "] = " << norm2(out2[s])
                                     << "  QUDA/Chroma[" <<s << "] = " << norm2(out1[s]) / norm2(out2[s]) <<std::endl;
                     }
@@ -740,7 +768,7 @@ namespace Chroma
                     QDPIO::cout << "Restoring NORMOP_PC / NORMERR_PC for solve" << std::endl;
                     if( invParam.cgnrP ) { quda_inv_param.solve_type = QUDA_NORMOP_PC_SOLVE;}
                     else { quda_inv_param.solve_type = QUDA_NORMERR_PC_SOLVE;}
-                }// if NORMOP_PC is used in test, no need to restore as that is what we want
+                    }// if NORMOP_PC is used in test, no need to restore as that is what we want
             }// New test
             }
 #endif
@@ -775,7 +803,24 @@ namespace Chroma
                 res = qudaInvert(chi,psi);
 
                 for(int s=0; s < this->size(); s++) {
-                    psi[s][sub_domain] *= twoKappaB;
+                    // MASS normalization
+                    if ( invParam.massNorm) {
+                        if ( ! quda_returns_mat ) {// MATPC solve
+                            psi[s][sub_domain] *= invTwoKappaBQuda * invTwoKappaBQuda * twoKappaB;
+                        }
+                        else { // MAT solve
+                            psi[s][sub_domain] *= invTwoKappaBQuda * twoKappaB;
+                        }
+                    }
+                    // KAPPA normalization
+                    else {
+                        if ( ! quda_returns_mat ) {// MATPC solve
+                            psi[s][sub_domain] *= twoKappaB;
+                        }
+                        else {
+                            psi[s][sub_domain] *= invTwoKappaBQuda * twoKappaB;
+                        }
+                    }
                 }
             }
 
@@ -793,6 +838,9 @@ namespace Chroma
                 Double r_norm_s(zero);
                 Double b_norm_s(zero);
                 (*A)(Ax, psi, PLUS);
+                if ( quda_returns_mat ){
+                    QDPIO::cout << "NOTE: with MAT solution, sources are ZERO in 5th dimension bulk" << std::endl;
+                }
                 for(int s=0; s < A->size(); s++)
                     {
                         r[s][sub_domain] = chi[s] - Ax[s];
@@ -800,10 +848,8 @@ namespace Chroma
                         b_norm_s = norm2(chi[s], sub_domain);
                         r_norm += r_norm_s;
                         b_norm += b_norm_s;
-                        if ( quda_returns_mat ){
-                            QDPIO::cout << "NOTE: with MAT solution, sources are ZERO in 5th dimension bulk" << std::endl;
-                        }
                         QDPIO::cout << " | r[" << s <<"] | = " << sqrt(r_norm_s)
+                                    << " | b[" << s <<"] | = " << sqrt(b_norm_s)
                                     << " |r|/|b|[" <<s<< "] = " << sqrt(r_norm_s)/sqrt(b_norm_s)
                                     << std::endl;
                     }

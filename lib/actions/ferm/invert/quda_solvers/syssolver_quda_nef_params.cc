@@ -31,6 +31,13 @@ namespace Chroma {
             checkSolution = false;
         }
 
+        if ( paramtop.count("massNorm") > 0 ) {
+            read(paramtop, "massNorm", massNorm);
+        }
+        else {
+            massNorm = false;
+        }
+
         if ( paramtop.count("MatPCType") > 0 ) {
             read(paramtop, "MatPCType", MatPCType);
         }
@@ -203,6 +210,7 @@ namespace Chroma {
         write(xml, "SilentFail"                 , p.SilentFailP);
         write(xml, "RsdToleranceFactor"         , p.RsdToleranceFactor);
         write(xml, "checkSolution"              , p.checkSolution);
+        write(xml, "massNorm"                   , p.massNorm);
         write(xml, "MatPCType"                  , p.MatPCType);
         write(xml, "MatSolutionType"            , p.MatSolutionType);
         write(xml, "AutotuneDslash"             , p.tuneDslashP);
@@ -229,7 +237,5 @@ namespace Chroma {
         pop(xml);
 
     }
-
-
 
 }

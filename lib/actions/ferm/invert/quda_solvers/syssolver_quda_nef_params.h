@@ -35,6 +35,7 @@ namespace Chroma
             cgnrP           = false;
             InvDeflate      = false;
             checkSolution   = false;
+            massNorm        = false;
             MatPCType       = ODD_ODD_ASYM; // change me to ODD_ODD when supported
             MatSolutionType = MATPC;        // change me to MAT when supported
         };
@@ -65,6 +66,7 @@ namespace Chroma
             dump_on_failP      = p.dump_on_failP;
             cgnrP              = p.cgnrP;
             checkSolution      = p.checkSolution;
+            massNorm           = p.massNorm;
             MatPCType          = p.MatPCType;
             MatSolutionType    = p.MatSolutionType;
             // Do deflation?
@@ -78,6 +80,7 @@ namespace Chroma
         // Original NEF params
         NEFFermActParams NEFParams;
         bool checkSolution;
+        bool massNorm;
         bool AntiPeriodicT;
         int  MaxIter;
         Real RsdTarget;
