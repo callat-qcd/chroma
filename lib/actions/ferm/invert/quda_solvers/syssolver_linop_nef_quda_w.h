@@ -589,7 +589,7 @@ namespace Chroma
             // Make note about normalizations
             Double invTwoKappaBQuda = Nd - invParam.NEFParams.OverMass + 1.;
             Double twoKappaBQuda    = 1./invTwoKappaBQuda;
-#if 1 
+#if 1
             {
                 // Set Kappa since QUDA MatQuda used in test code does not call massRescale to set this parameter
                 quda_inv_param.kappa = 0.5 * toDouble(twoKappaBQuda);
@@ -719,7 +719,7 @@ namespace Chroma
                     // Copy in1 into QUDA
                     REAL* spinorIn = new REAL[quda_inv_param.Ls*fermsize];
                     REAL* spinorOut = new REAL[quda_inv_param.Ls*fermsize];
-                    memset((spinorIn), 0, fermsize*quda_inv_param.Ls*sizeof(REAL));
+                    memset((spinorIn),  0, fermsize*quda_inv_param.Ls*sizeof(REAL));
                     memset((spinorOut), 0, fermsize*quda_inv_param.Ls*sizeof(REAL));
                     
                     for(unsigned int s=0; s<quda_inv_param.Ls; s++){
