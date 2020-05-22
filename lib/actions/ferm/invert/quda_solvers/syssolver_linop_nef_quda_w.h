@@ -2,6 +2,8 @@
 /*! \file
  *  \brief Solve a MdagM*psi=chi linear system by BiCGStab
  */
+#include <iomanip>
+
 
 #ifndef __syssolver_linop_quda_nef_h__
 #define __syssolver_linop_quda_nef_h__
@@ -699,7 +701,9 @@ namespace Chroma
                 multi1d<T> out2(this->size() );
             
                 for(int s=0; s < this->size(); s++ ) {
-                    gaussian(in1[s]);  // Gaussian into in1
+                    //gaussian(in1[s]);  // Gaussian into in1
+                    in1[s] = zero;
+                    in1[s].elem(even.start()).elem(0).elem(0).real() = 1.;
                     in2[s] = in1[s];   // copy to in2
                 }            
                 for(int d=0; d < 2; d++) {
@@ -741,7 +745,20 @@ namespace Chroma
                     // Now compare out1 (QUDA) and out2 (Chroma)
                     // QUDA MatQuda does NOT use massRescale which sets kappa for us
                     //      therefore, we have to 
-                    QDPIO::cout << "compare nomr2 of operators" << std::endl;
+                    QDPIO::cout << "compare nomr2 of operators and color=spin=0 of a few time slices" << std::endl;
+                    // Look at a couple timeslices
+                    multi1d<int> coord_0(4), coord_1(4), coord_mid(4), coord_end(4);
+                    int Nt = QDP::Layout::lattSize()[3];
+                    int mid_t = (int)Nt/2;
+                    coord_0(0) = 0; coord_0(1) = 0; coord_0(2) = 0; coord_0(3) = 0;
+                    coord_1(0) = 1; coord_1(1) = 0; coord_1(2) = 0; coord_1(3) = 0;
+                    coord_mid(0) = 0; coord_mid(1) = 0; coord_mid(2) = 0; coord_mid(3) = mid_t;
+                    coord_end(0) = 0; coord_end(1) = 0; coord_end(2) = 0; coord_end(3) = Nt-1;
+                    multi1d<int> node_0 = Layout::nodeCoord(coord_0);
+                    multi1d<int> node_1 = Layout::nodeCoord(coord_1);
+                    multi1d<int> node_mid = Layout::nodeCoord(coord_mid);
+                    multi1d<int> node_end = Layout::nodeCoord(coord_end);
+
                     for(int s=0; s < this->size();s++) {
                         // QUDA to Chroma normalization
                         out1[s] *= invTwoKappaB;
@@ -754,9 +771,80 @@ namespace Chroma
                                 out1[s] *= twoKappaBQuda;
                             }
                        }
+                       /*
                        QDPIO::cout << "QUDA[" <<s << "] = " << norm2(out1[s])
                                     << "  Chroma[" <<s << "] = " << norm2(out2[s])
                                     << "  QUDA/Chroma[" <<s << "] = " << norm2(out1[s]) / norm2(out2[s]) <<std::endl;
+                       */
+                       QDPIO::cout << "L5 X Y Z T"<<std::endl;
+                       int linearInd;
+                       if (Layout::nodeCoord() == node_0) {
+                           for (int xi=0; xi<QDP::Layout::lattSize()[0]; xi++){
+                               coord_0(0) = xi;
+                               for (int yi=0; yi<QDP::Layout::lattSize()[1]; yi++) {
+                                   coord_0(1) = yi;
+                                   for (int zi=0; zi<QDP::Layout::lattSize()[2]; zi++) {
+                                       coord_0(2) = zi;
+                                       for (int ti=0; ti<Nt; ti++){
+                                           coord_0(3) = ti;
+                                           linearInd = Layout::linearSiteIndex(coord_0);
+                                           double quda_re = toDouble(QDP::real(out1[s].elem(linearInd).elem(0).elem(0)));
+                                           double quda_im = toDouble(QDP::imag(out1[s].elem(linearInd).elem(0).elem(0)));
+                                           double chroma_re = toDouble(QDP::real(out2[s].elem(linearInd).elem(0).elem(0)));
+                                           double chroma_im = toDouble(QDP::imag(out2[s].elem(linearInd).elem(0).elem(0)));
+                                           if ( quda_re > 1.e-4 || chroma_re > 1.e-4){
+                                               std::cout << s << "  " << xi << " " << yi << " " << zi << " " << ti 
+                                                         <<"  QUDA = " << std::setprecision(5) << quda_re
+                                                         << " +I " << std::setprecision(5)<< quda_im
+                                                         << "  Chroma = "<< std::setprecision(5)<< chroma_re
+                                                         << " +I " << std::setprecision(5)<< chroma_im
+                                                         << std::endl;
+                                           }
+                                       }
+                                   }
+                               }
+                           }
+                       }
+                       /*
+                           linearInd = Layout::linearSiteIndex(coord_0);
+                           std::cout << "0 0 0 0   QUDA = " << std::setprecision(10) <<QDP::real(out1[s].elem(linearInd).elem(0).elem(0))
+                                     << " +I " << std::setprecision(10)<< QDP::imag(out1[s].elem(linearInd).elem(0).elem(0))
+                                     << "  Chroma = "<< std::setprecision(10)<<QDP::real(out2[s].elem(linearInd).elem(0).elem(0))
+                                     << " +I " << std::setprecision(10)<< QDP::imag(out2[s].elem(linearInd).elem(0).elem(0))
+                                     << std::endl;
+                       }
+                       if (Layout::nodeCoord() == node_1) {
+                           linearInd = Layout::linearSiteIndex(coord_1);
+                           std::cout << "1 0 0 0   QUDA = " << std::setprecision(10) <<QDP::real(out1[s].elem(linearInd).elem(0).elem(0))
+                                     << " +I " << std::setprecision(10)<< QDP::imag(out1[s].elem(linearInd).elem(0).elem(0))
+                                     << "  Chroma = "<< std::setprecision(10)<<QDP::real(out2[s].elem(linearInd).elem(0).elem(0))
+                                     << " +I " << std::setprecision(10)<< QDP::imag(out2[s].elem(linearInd).elem(0).elem(0))
+                                     << std::endl;
+                       }
+                       if (Layout::nodeCoord() == node_0) {
+                           std::cout << "odd.start QUDA = "<< std::setprecision(10)<<QDP::real(out1[s].elem(odd.start()).elem(0).elem(0))
+                                     << " +I " << std::setprecision(10)<< QDP::imag(out1[s].elem(odd.start()).elem(0).elem(0))
+                                     << "  Chroma = "<< std::setprecision(10)<<QDP::real(out2[s].elem(odd.start()).elem(0).elem(0))
+                                     << " +I " << std::setprecision(10)<< QDP::imag(out2[s].elem(odd.start()).elem(0).elem(0))
+                                     << std::endl;
+                       }
+                       if (Layout::nodeCoord() == node_mid) {
+                           linearInd = Layout::linearSiteIndex(coord_mid);
+                           std::cout << "0 0 0 T/2 QUDA = "<< std::setprecision(10)<<QDP::real(out1[s].elem(linearInd).elem(0).elem(0))
+                                     << " +I " << std::setprecision(10)<< QDP::imag(out1[s].elem(linearInd).elem(0).elem(0))
+                                     << "  Chroma = "<< std::setprecision(10)<<QDP::real(out2[s].elem(linearInd).elem(0).elem(0))
+                                     << " +I " << std::setprecision(10)<< QDP::imag(out2[s].elem(linearInd).elem(0).elem(0))
+                                     << std::endl;
+                       }
+                       if (Layout::nodeCoord() == node_end) {
+                           linearInd = Layout::linearSiteIndex(coord_end);
+                           std::cout << "0 0 0 T   QUDA = "<< std::setprecision(10)<<QDP::real(out1[s].elem(linearInd).elem(0).elem(0))
+                                     << " +I " << std::setprecision(10)<< QDP::imag(out1[s].elem(linearInd).elem(0).elem(0))
+                                     << "  Chroma = "<< std::setprecision(10)<<QDP::real(out2[s].elem(linearInd).elem(0).elem(0))
+                                     << " +I " << std::setprecision(10)<< QDP::imag(out2[s].elem(linearInd).elem(0).elem(0))
+                                     << std::endl;
+                       }
+                       */
                     }
                     
                     delete [] spinorIn;
@@ -839,6 +927,7 @@ namespace Chroma
                 Double b_norm_s(zero);
                 (*A)(Ax, psi, PLUS);
                 if ( quda_returns_mat ){
+                    QDPIO::cout << "===============================================================" << std::endl;
                     QDPIO::cout << "NOTE: with MAT solution, sources are ZERO in 5th dimension bulk" << std::endl;
                 }
                 for(int s=0; s < A->size(); s++)
