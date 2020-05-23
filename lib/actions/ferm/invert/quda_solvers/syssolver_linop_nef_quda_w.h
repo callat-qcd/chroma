@@ -591,6 +591,14 @@ namespace Chroma
             // Make note about normalizations
             Double invTwoKappaBQuda = Nd - invParam.NEFParams.OverMass + 1.;
             Double twoKappaBQuda    = 1./invTwoKappaBQuda;
+	    // We need this to fix the parity-mix up of the solution QUDA hands back EVEN then ODD, chroma wants EVEN/ODD per s_5
+	    const multi1d<int>& latdims = Layout::subgridLattSize();
+	    int fermsize = 2 * Nc * Ns * latdims[0]*latdims[1]*latdims[2]*latdims[3];
+	    if ( ! quda_returns_mat){
+	      fermsize = fermsize / 2.;
+	    }
+	    int parity_offset = (quda_inv_param.Ls / 2) * fermsize;
+
 #if 1
             {
                 // Set Kappa since QUDA MatQuda used in test code does not call massRescale to set this parameter
@@ -636,7 +644,8 @@ namespace Chroma
                     memset((spinorIn), 0, fermsize*quda_inv_param.Ls*sizeof(REAL));
                     memset((spinorOut), 0, fermsize*quda_inv_param.Ls*sizeof(REAL));
 
-                    for(unsigned int s=0; s<quda_inv_param.Ls; s++){
+
+		    for(unsigned int s=0; s<quda_inv_param.Ls; s++){
                         memcpy((&spinorIn[fermsize*s]),&(in_quda[s].elem(rb[1].start()).elem(0).elem(0).real()),fermsize*sizeof(REAL));
                     }
                     // Apply QUDA
@@ -660,6 +669,11 @@ namespace Chroma
                         if ( invParam.massNorm ) {
                             out_quda[s] *= twoKappaBQuda * twoKappaBQuda;
                         }
+			QDPIO::cout << "QUDA[" <<s << "rb[0]] = " << norm2(out_quda[s], rb[0])
+				    << "QUDA[" <<s << "rb[1]] = " << norm2(out_quda[s], rb[1])
+                                    << "  Chroma[" <<s << "rb[0]] = " << norm2(out_chroma[s], rb[0]) 
+                                    << "  Chroma[" <<s << "rb[1]] = " << norm2(out_chroma[s], rb[1])
+				    << std::endl;
                         QDPIO::cout << "QUDA[" <<s << "] = " << norm2(out_quda[s]) 
                                     << "  Chroma[" <<s << "] = " << norm2(out_chroma[s]) 
                                     << "  QUDA/Chroma[" <<s << "] = " << norm2(out_quda[s]) / norm2(out_chroma[s]) <<std::endl;
@@ -676,11 +690,6 @@ namespace Chroma
             // New test with MAT solution
             {
                 QDPIO::cout << "NEW TEST" << std::endl;
-                const multi1d<int>& latdims = Layout::subgridLattSize();
-                int fermsize = 2 * Nc * Ns * latdims[0]*latdims[1]*latdims[2]*latdims[3];
-                if ( ! quda_returns_mat){
-                    fermsize = fermsize / 2.;
-                }
 
                 // Set operator as MAT or MATPC based on size of sub_domain
                 if ( sub_domain.numSiteTable() == Layout::sitesOnNode() ) {
@@ -707,7 +716,7 @@ namespace Chroma
                         in_quda[s].elem(even.start()).elem(0).elem(0).real() = 1.;
                     }
                     else {
-                        in_quda[s].elem(odd.start()).elem(0).elem(0).real() = 1.;
+		        in_quda[s] = chi[s];
                     }
                     in_chroma[s] = in_quda[s];   // copy to in_chroma
                 }            
@@ -731,8 +740,25 @@ namespace Chroma
                     memset((spinorIn),  0, fermsize*quda_inv_param.Ls*sizeof(REAL));
                     memset((spinorOut), 0, fermsize*quda_inv_param.Ls*sizeof(REAL));
                     
+		    // HACK TO TEST IN/OUT
+                    // Now compare out_quda and out_chroma
+                    QDPIO::cout << "compare nomr2 of operators BEFORE handing to QUDA" << std::endl;
+                    for(int s=0; s < this->size();s++) {
+			QDPIO::cout << "QUDA[" <<s << ", rb[0]] = " << norm2(in_quda[s], rb[0])
+				    << "  QUDA[" <<s << ", rb[1]] = " << norm2(in_quda[s], rb[1])
+                                    << "  Chroma[" <<s << ", rb[0]] = " << norm2(in_chroma[s], rb[0]) 
+                                    << "  Chroma[" <<s << ". rb[1]] = " << norm2(in_chroma[s], rb[1])
+				    << std::endl;
+                    }
+
                     for(unsigned int s=0; s<quda_inv_param.Ls; s++){
-                        memcpy((&spinorIn[fermsize*s]),&(in_quda[s].elem(start_site).elem(0).elem(0).real()),fermsize*sizeof(REAL));
+		        if ( sub_domain.numSiteTable() == Layout::sitesOnNode() ) {
+			  memcpy((&spinorIn[(fermsize / 2) * s]), &(in_quda[s].elem(rb[0].start()).elem(0).elem(0).real()), (fermsize/2)*sizeof(REAL));
+			  memcpy((&spinorIn[parity_offset + (fermsize / 2) * s]), &(in_quda[s].elem(rb[1].start()).elem(0).elem(0).real()), (fermsize/2)*sizeof(REAL));
+			}
+			else {
+			  memcpy((&spinorIn[fermsize*s]),&(in_quda[s].elem(start_site).elem(0).elem(0).real()),fermsize*sizeof(REAL));
+			}
                     }                    
                     // Apply QUDA
                     if( d==0 ) {
@@ -745,8 +771,14 @@ namespace Chroma
                     }
                     
                     for(unsigned int s=0; s<quda_inv_param.Ls; s++){
-                        memcpy((&out_quda[s].elem(start_site).elem(0).elem(0).real()),(&spinorOut[fermsize*s]),fermsize*sizeof(REAL));
-                    }
+		      if ( sub_domain.numSiteTable() == Layout::sitesOnNode() ) {
+			memcpy((&out_quda[s].elem(rb[0].start()).elem(0).elem(0).real()),(&spinorOut[(fermsize / 2) * s]), (fermsize/2)*sizeof(REAL));
+			memcpy((&out_quda[s].elem(rb[1].start()).elem(0).elem(0).real()),(&spinorOut[parity_offset + (fermsize / 2) * s]), (fermsize/2)*sizeof(REAL));
+		      }
+		      else {
+			memcpy((&out_quda[s].elem(start_site).elem(0).elem(0).real()),(&spinorOut[fermsize * s]), fermsize*sizeof(REAL));
+		      }
+		    }
                     // Now compare out_quda (QUDA) and out_chroma (Chroma)
                     // QUDA MatQuda does NOT use massRescale which sets kappa for us
                     //      therefore, we have to 
@@ -765,6 +797,12 @@ namespace Chroma
                     multi1d<int> node_end = Layout::nodeCoord(coord_end);
 
                     for(int s=0; s < this->size();s++) {
+		      QDPIO::cout << "Checking unormalized vector back from QUDA" << std::endl;
+		      QDPIO::cout << "QUDA[" <<s << ", rb[0]] = " << norm2(out_quda[s], rb[0])
+				   << "  QUDA[" <<s << ", rb[1]] = " << norm2(out_quda[s], rb[1])
+				   << "  Chroma[" <<s << ", rb[0]] = " << norm2(out_chroma[s], rb[0]) 
+				   << "  Chroma[" <<s << ", rb[1]] = " << norm2(out_chroma[s], rb[1])
+				   << std::endl;
                         // QUDA to Chroma normalization
                         out_quda[s] *= invTwoKappaB;
                         // MASS normalization
@@ -814,52 +852,12 @@ namespace Chroma
                                }
                            }
                        }
-                       /*
-                           linearInd = Layout::linearSiteIndex(coord_0);
-                           std::cout << "0 0 0 0   QUDA = " << std::setprecision(10) <<QDP::real(out_quda[s].elem(linearInd).elem(0).elem(0))
-                                     << " +I " << std::setprecision(10)<< QDP::imag(out_quda[s].elem(linearInd).elem(0).elem(0))
-                                     << "  Chroma = "<< std::setprecision(10)<<QDP::real(out_chroma[s].elem(linearInd).elem(0).elem(0))
-                                     << " +I " << std::setprecision(10)<< QDP::imag(out_chroma[s].elem(linearInd).elem(0).elem(0))
-                                     << std::endl;
-                       }
-                       if (Layout::nodeCoord() == node_1) {
-                           linearInd = Layout::linearSiteIndex(coord_1);
-                           std::cout << "1 0 0 0   QUDA = " << std::setprecision(10) <<QDP::real(out_quda[s].elem(linearInd).elem(0).elem(0))
-                                     << " +I " << std::setprecision(10)<< QDP::imag(out_quda[s].elem(linearInd).elem(0).elem(0))
-                                     << "  Chroma = "<< std::setprecision(10)<<QDP::real(out_chroma[s].elem(linearInd).elem(0).elem(0))
-                                     << " +I " << std::setprecision(10)<< QDP::imag(out_chroma[s].elem(linearInd).elem(0).elem(0))
-                                     << std::endl;
-                       }
-                       if (Layout::nodeCoord() == node_0) {
-                           std::cout << "odd.start QUDA = "<< std::setprecision(10)<<QDP::real(out_quda[s].elem(odd.start()).elem(0).elem(0))
-                                     << " +I " << std::setprecision(10)<< QDP::imag(out_quda[s].elem(odd.start()).elem(0).elem(0))
-                                     << "  Chroma = "<< std::setprecision(10)<<QDP::real(out_chroma[s].elem(odd.start()).elem(0).elem(0))
-                                     << " +I " << std::setprecision(10)<< QDP::imag(out_chroma[s].elem(odd.start()).elem(0).elem(0))
-                                     << std::endl;
-                       }
-                       if (Layout::nodeCoord() == node_mid) {
-                           linearInd = Layout::linearSiteIndex(coord_mid);
-                           std::cout << "0 0 0 T/2 QUDA = "<< std::setprecision(10)<<QDP::real(out_quda[s].elem(linearInd).elem(0).elem(0))
-                                     << " +I " << std::setprecision(10)<< QDP::imag(out_quda[s].elem(linearInd).elem(0).elem(0))
-                                     << "  Chroma = "<< std::setprecision(10)<<QDP::real(out_chroma[s].elem(linearInd).elem(0).elem(0))
-                                     << " +I " << std::setprecision(10)<< QDP::imag(out_chroma[s].elem(linearInd).elem(0).elem(0))
-                                     << std::endl;
-                       }
-                       if (Layout::nodeCoord() == node_end) {
-                           linearInd = Layout::linearSiteIndex(coord_end);
-                           std::cout << "0 0 0 T   QUDA = "<< std::setprecision(10)<<QDP::real(out_quda[s].elem(linearInd).elem(0).elem(0))
-                                     << " +I " << std::setprecision(10)<< QDP::imag(out_quda[s].elem(linearInd).elem(0).elem(0))
-                                     << "  Chroma = "<< std::setprecision(10)<<QDP::real(out_chroma[s].elem(linearInd).elem(0).elem(0))
-                                     << " +I " << std::setprecision(10)<< QDP::imag(out_chroma[s].elem(linearInd).elem(0).elem(0))
-                                     << std::endl;
-                       }
-                       */
                     }
                     delete [] spinorIn;
                     delete [] spinorOut;
                 }// D D^dagger loop
-                QDPIO::cout << "Exiting after one solve" << std::endl;
-                QDP_abort(1);
+                //QDPIO::cout << "Exiting after one solve" << std::endl;
+                //QDP_abort(1);
                 // Reset quda_inv_param params
                 quda_inv_param.dagger = QUDA_DAG_NO;
                 if ( sub_domain.numSiteTable() == Layout::sitesOnNode() ) {
@@ -900,6 +898,8 @@ namespace Chroma
                 QDPIO::cout << "Calling qudaInvert" << std::endl;
                 res = qudaInvert(chi,psi);
 
+		multi1d<T> psi_tmp( this->size() );
+		
                 for(int s=0; s < this->size(); s++) {
                     // MASS normalization
                     if ( invParam.massNorm) {
@@ -910,16 +910,36 @@ namespace Chroma
                             psi[s][sub_domain] *= invTwoKappaBQuda * twoKappaB;
                         }
                     }
+		    /*
                     // KAPPA normalization
-                    else {
-                        if ( ! quda_returns_mat ) {// MATPC solve
-                            psi[s][sub_domain] *= twoKappaB;
+		    if ( sub_domain.numSiteTable() == Layout::sitesOnNode() ) {
+			  memcpy((&spinorIn[(fermsize / 2) * s]), &(in_quda[s].elem(rb[0].start()).elem(0).elem(0).real()), (fermsize/2)*sizeof(REAL));
+                          memcpy((&spinorIn[parity_offset + (fermsize / 2) * s]), &(in_quda[s].elem(rb[1].start()).elem(0).elem(0).real()), (fermsize/2)*sizeof(REAL));
                         }
                         else {
-                            psi[s][sub_domain] *= invTwoKappaBQuda * twoKappaB;
+                          memcpy((&spinorIn[fermsize*s]),&(in_quda[s].elem(start_site).elem(0).elem(0).real()),fermsize*sizeof(REAL));
+                        }
+		    */
+		    else {
+                        if ( ! quda_returns_mat ) {// MATPC solve
+			  psi[s][sub_domain] *= twoKappaB;
+                        }
+                        else {
+			  psi[s][sub_domain] *= invTwoKappaBQuda * twoKappaB;
+			  //memcpy(&(psi_tmp[s].elem(start_site).elem(0).elem(0).real()), &(psi[s].elem(start_site).elem(0).elem(0).real()), fermsize*sizeof(REAL));
+			  QDPIO::cout << "trying to copy to tmp container s=" << s << std::endl;
+			  psi_tmp[s][sub_domain] = psi[s];
                         }
                     }
                 }
+		for(int s=0; s < this->size(); s++) {
+		  QDPIO::cout << "memcopy psi_tmp to psi, s=" << s<< std::endl;
+		  memcpy(&(psi[s].elem(rb[0].start()).elem(0).elem(0).real()),
+			 &(psi_tmp[(s/2)].elem(rb[s % 2].start()).elem(0).elem(0).real()), (fermsize/2)*sizeof(REAL));
+		  QDPIO::cout << "memcopy psi_tmp to psi copy 2, s=" << s<< std::endl;
+		  memcpy(&(psi[s].elem(rb[1].start()).elem(0).elem(0).real()),
+			 &(psi_tmp[(s/2) +(quda_inv_param.Ls/2)].elem(rb[s % 2].start()).elem(0).elem(0).real()), (fermsize/2)*sizeof(REAL));
+		}
             }
 
             swatch.stop();
