@@ -896,7 +896,27 @@ namespace Chroma
             }
             else {
                 QDPIO::cout << "Calling qudaInvert" << std::endl;
-                res = qudaInvert(chi,psi);
+                multi1d<T> chi_parity_flip( this->size() );
+		/*
+		  s=0; chi_pflip[0][E]   <-- chi[0][E]
+		  s=2; chi_pflip[0][O]   <-- chi[1][E]
+		  s=0; chi_pflip[1][E]   <-- chi[2][E]
+		  s=2; chi_pflip[1][O]   <-- chi[3][E]
+		  s=1; chi_pflip[0+2][E] <-- chi[0][O]
+		  s=3; chi_pflip[0+2][O] <-- chi[1][O]
+		  s=1; chi_pflip[1+2][E] <-- chi[2][O]
+		  s=3; chi_pflip[1+2][O] <-- chi[3][O]
+		 */
+		for(int s=0; s < this->size(); s++) {
+		  QDPIO::cout << "memcopy chi to chi_parity_flip, s=" << s<< std::endl;
+		  memcpy(&(chi_parity_flip[(s/2)].elem(rb[s%2].start()).elem(0).elem(0).real()),
+			 &(chi[s].elem(rb[0].start()).elem(0).elem(0).real()), (fermsize/2)*sizeof(REAL));
+		  QDPIO::cout << "memcopy chi to chi_parity_flip copy 2, s=" << s<< std::endl;
+		  memcpy(&(chi_parity_flip[(s/2) +(quda_inv_param.Ls/2)].elem(rb[s%2].start()).elem(0).elem(0).real()),
+			 &(chi[s].elem(rb[1].start()).elem(0).elem(0).real()), (fermsize/2)*sizeof(REAL));
+		}
+
+		res = qudaInvert(chi_parity_flip,psi);
 
 		multi1d<T> psi_tmp( this->size() );
 		
@@ -925,7 +945,8 @@ namespace Chroma
 			  psi[s][sub_domain] *= twoKappaB;
                         }
                         else {
-			  psi[s][sub_domain] *= invTwoKappaBQuda * twoKappaB;
+			  //psi[s][sub_domain] *= invTwoKappaBQuda * twoKappaB;
+			  psi[s][sub_domain] *= twoKappaB;
 			  //memcpy(&(psi_tmp[s].elem(start_site).elem(0).elem(0).real()), &(psi[s].elem(start_site).elem(0).elem(0).real()), fermsize*sizeof(REAL));
 			  QDPIO::cout << "trying to copy to tmp container s=" << s << std::endl;
 			  psi_tmp[s][sub_domain] = psi[s];
