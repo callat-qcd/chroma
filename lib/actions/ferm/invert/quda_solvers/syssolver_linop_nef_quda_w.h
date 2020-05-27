@@ -109,13 +109,11 @@ namespace Chroma
                                 << "if Chroma is doing the reconstruction (MATPC solution type)" << std::endl;
                     QDP_abort(1);
                 }
-                QDPIO::cout << "we got QUDA_MATPC_SOLUTION" << std::endl;
                 start_site = rb[1].start();
                 quda_inv_param.solution_type = QUDA_MATPC_SOLUTION;
                 quda_returns_mat = false;
                 break;
             case MAT:
-                QDPIO::cout << "we got QUDA_MAT_SOLUTION" << std::endl;
                 start_site = 0;
                 quda_inv_param.solution_type = QUDA_MAT_SOLUTION;
                 quda_returns_mat = true;

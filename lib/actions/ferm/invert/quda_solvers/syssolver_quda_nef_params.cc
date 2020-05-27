@@ -41,15 +41,9 @@ namespace Chroma {
         if ( paramtop.count("MatPCType") > 0 ) {
             read(paramtop, "MatPCType", MatPCType);
         }
-        else {
-            MatPCType = EVEN_EVEN;
-        }
 
         if ( paramtop.count("MatSolutionType") > 0 ) {
             read(paramtop, "MatSolutionType", MatSolutionType);
-        }
-        else {
-            MatSolutionType = MAT;
         }
 
         if ( paramtop.count("Verbose") > 0 ) {
