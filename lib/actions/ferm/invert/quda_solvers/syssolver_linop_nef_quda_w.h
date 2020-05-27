@@ -85,6 +85,8 @@ namespace Chroma
             A(A_), invParam(invParam_)
         {
             START_CODE();
+            // Declare sub_domain which is either all for MAT or rb[1] for MATPC
+            const Subset& sub_domain = A->subset();
 
             QDPIO::cout << "LinOpSysSolverQUDANEF:" << std::endl;
 
@@ -107,19 +109,31 @@ namespace Chroma
                                 << "if Chroma is doing the reconstruction (MATPC solution type)" << std::endl;
                     QDP_abort(1);
                 }
+                QDPIO::cout << "we got QUDA_MATPC_SOLUTION" << std::endl;
                 start_site = rb[1].start();
                 quda_inv_param.solution_type = QUDA_MATPC_SOLUTION;
                 quda_returns_mat = false;
                 break;
             case MAT:
+                QDPIO::cout << "we got QUDA_MAT_SOLUTION" << std::endl;
                 start_site = 0;
                 quda_inv_param.solution_type = QUDA_MAT_SOLUTION;
                 quda_returns_mat = true;
                 break;
-            default:
-                start_site = rb[1].start();
-                quda_inv_param.solution_type = QUDA_MATPC_SOLUTION;
-                quda_returns_mat = false;
+            default:// we verified the MAT solution agrees - so default will become the faster one
+                if ( sub_domain.numSiteTable() == Layout::sitesOnNode() ) {
+                    QDPIO::cout << "we got QUDA_MAT_SOLUTION" << std::endl;
+                    start_site = 0;
+                    quda_inv_param.solution_type = QUDA_MAT_SOLUTION;
+                    quda_returns_mat = true;
+                }
+                // else - relapse to QUDA returning a MATPC solution and chroma reconstructs
+                else {
+                    QDPIO::cout << "we got QUDA_MATPC_SOLUTION" << std::endl;
+                    start_site = rb[1].start();
+                    quda_inv_param.solution_type = QUDA_MATPC_SOLUTION;
+                    quda_returns_mat = false;
+                }
                 break;
             }
 
@@ -141,9 +155,17 @@ namespace Chroma
                 QDPIO::cout << "Using EVEN_EVEN_Symmetric Linop: 1 - A_ee ^{-1} Deo Aoo^{-1} Doe" << std::endl;
                 quda_inv_param.matpc_type  =  QUDA_MATPC_EVEN_EVEN;
                 break;
-            default: // for now for sure, Chroma does not support EVEN_EVEN
-                QDPIO::cout << "Using ODD_ODD_Asymmetric Linop: A_oo - D_oe A^{-1}_ee D_eo" << std::endl;
-                quda_inv_param.matpc_type  =  QUDA_MATPC_ODD_ODD_ASYMMETRIC;
+            default:
+                // The new interface supports MAT solutions for which E_E_S is probably the fastest
+                if ( quda_returns_mat ) {
+                    QDPIO::cout << "Using EVEN_EVEN_Symmetric Linop: 1 - A_ee ^{-1} Deo Aoo^{-1} Doe" << std::endl;
+                    quda_inv_param.matpc_type  =  QUDA_MATPC_EVEN_EVEN;
+                }
+                // The default Chroma call was with NEF which only supports O_O_A
+                else {
+                    QDPIO::cout << "Using ODD_ODD_Asymmetric Linop: A_oo - D_oe A^{-1}_ee D_eo" << std::endl;
+                    quda_inv_param.matpc_type  =  QUDA_MATPC_ODD_ODD_ASYMMETRIC;
+                }
                 break;
             }
             if(quda_returns_mat){
@@ -615,122 +637,45 @@ namespace Chroma
             
             const multi1d<int>& latdims = Layout::subgridLattSize();
             int fermsize = 2 * Nc * Ns * latdims[0]*latdims[1]*latdims[2]*latdims[3];
+            int half_fermsize;
             if ( ! quda_returns_mat){
                 fermsize = fermsize / 2.;
+                half_fermsize = fermsize;
+            }
+            else {
+                half_fermsize = fermsize / 2;
             }
 
 #if 0
             {
                 // Set Kappa since QUDA MatQuda used in test code does not call massRescale to set this parameter
                 quda_inv_param.kappa = 0.5 * toDouble(twoKappaBQuda);
+                bool VERBOSE_TEST=true;
+                bool POINT_SOURCE=false;
+                
+                QDPIO::cout << "TEST the Application of MatChroma and MatQUDA to the source" << std::endl;
 
-                if( !quda_returns_mat ){
-                    // Test code.... ONLY for PRECONDITIONED TYPE
-                    // we explicitly left rb[1] in here to preserve the original check
-                    // still passes if driven with new code but MATPC and ODD_ODD_ASYM selected
-                    QDPIO::cout << "ORIGINAL TEST" << std::endl;
-                    const multi1d<int>& tmp_dims = Layout::subgridLattSize();
-                    //int halfsize=latdims[0]*latdims[1]*latdims[2]*latdims[3]/2;
-                    int fermsize= Nc*Ns*2 * tmp_dims[0]*tmp_dims[1]*tmp_dims[2]*tmp_dims[3]/2;
+                // Set operator as MAT or MATPC based on size of sub_domain
+                if ( sub_domain.numSiteTable() == Layout::sitesOnNode() ) {
+                    QDPIO::cout << "Using NORMOP / NORMERR for comparison" << std::endl;
+                    if( invParam.cgnrP ) { quda_inv_param.solve_type = QUDA_NORMOP_SOLVE;}
+                    else { quda_inv_param.solve_type = QUDA_NORMERR_SOLVE;}
+                }
+                else{
+                    QDPIO::cout << "Using NORMOP_PC / NORMERR_PC for comparison" << std::endl;
+                    // no need to set this as it is the solve_type requested
+                }
 
-                    // In_Quda is input to QUDA, Out_Quda is result
-                    multi1d<T> in_quda( this->size() );
-                    multi1d<T> out_quda(this->size() );
-                    // In_Chroma is input to Chroma, Out_Chroma is result
-                    multi1d<T> in_chroma( this->size() );
-                    multi1d<T> out_chroma(this->size() );
-
-                    for(int s=0; s < this->size(); s++ ) {
-                        gaussian(in_quda[s]);  // Gaussian into in_quda
-                        in_chroma[s] = in_quda[s];   // copy to in_chroma
-                    }
-                    for(int d=0; d < 2; d++) {
-                        for(int s=0; s < this->size(); s++ ) {
-                            out_quda[s]=zero;   // zero both out_quda and out_chroma
-                            out_chroma[s]=zero;
-                        }
-                        if ( d==0 ) {//Chroma
-                            // Apply A to in_chroma
-                            QDPIO::cout << "Doing Mat" << std::endl;
-                            (*A)(out_chroma, in_chroma, PLUS);
-                        }
-                        else {
-                            QDPIO::cout << "Doing MatDag" << std::endl;
-                            (*A)(out_chroma, in_chroma, MINUS);
-                        }
-                        // Copy in_quda into QUDA
-                        REAL* spinorIn = new REAL[quda_inv_param.Ls*fermsize];
-                        REAL* spinorOut = new REAL[quda_inv_param.Ls*fermsize];
-                        memset((spinorIn), 0, fermsize*quda_inv_param.Ls*sizeof(REAL));
-                        memset((spinorOut), 0, fermsize*quda_inv_param.Ls*sizeof(REAL));
-
-
-                        for(unsigned int s=0; s<quda_inv_param.Ls; s++){
-                            memcpy((&spinorIn[fermsize*s]),&(in_quda[s].elem(rb[1].start()).elem(0).elem(0).real()),fermsize*sizeof(REAL));
-                        }
-                        // Apply QUDA
-                        if( d==0 ) {
-                            quda_inv_param.dagger = QUDA_DAG_NO;
-                            MatQuda((void *)spinorOut, (void *)spinorIn, (QudaInvertParam*)&quda_inv_param);
-                        }
-                        else {
-                            quda_inv_param.dagger = QUDA_DAG_YES;
-                            MatQuda((void *)spinorOut, (void *)spinorIn, (QudaInvertParam*)&quda_inv_param);
-                        }
-                        for(unsigned int s=0; s<quda_inv_param.Ls; s++){
-                            memcpy((&out_quda[s].elem(rb[1].start()).elem(0).elem(0).real()),(&spinorOut[fermsize*s]),fermsize*sizeof(REAL));
-                        }
-                        // Now compare out_quda and out_chroma
-                        QDPIO::cout << "compare nomr2 of operators" << std::endl;
-                        for(int s=0; s < this->size();s++) {
-                            // QUDA to Chroma normalization
-                            out_quda[s] *= invTwoKappaB;
-                            // MASS normalization
-                            if ( invParam.massNorm ) {
-                                out_quda[s] *= twoKappaBQuda * twoKappaBQuda;
-                            }
-                            QDPIO::cout << "QUDA[" <<s << "rb[0]] = " << norm2(out_quda[s], rb[0])
-                                        << "QUDA[" <<s << "rb[1]] = " << norm2(out_quda[s], rb[1])
-                                        << "  Chroma[" <<s << "rb[0]] = " << norm2(out_chroma[s], rb[0]) 
-                                        << "  Chroma[" <<s << "rb[1]] = " << norm2(out_chroma[s], rb[1])
-                                        << std::endl;
-                            QDPIO::cout << "QUDA[" <<s << "] = " << norm2(out_quda[s]) 
-                                        << "  Chroma[" <<s << "] = " << norm2(out_chroma[s]) 
-                                        << "  QUDA/Chroma[" <<s << "] = " << norm2(out_quda[s]) / norm2(out_chroma[s]) <<std::endl;
-                            //QDPIO::cout << "s=" << s << "  diff=" << norm2(out_chroma[s]-out_quda[s]) << std::endl;
-                        }
-
-                        delete [] spinorIn;
-                        delete [] spinorOut;
-                    }// D D^dagger loop
-                    // Reset quda_inv_param.dagger
-                    quda_inv_param.dagger = QUDA_DAG_NO;
-                }// original test
-
-                // New test with MAT solution
-                {
-                    QDPIO::cout << "NEW TEST" << std::endl;
-
-                    // Set operator as MAT or MATPC based on size of sub_domain
-                    if ( sub_domain.numSiteTable() == Layout::sitesOnNode() ) {
-                        QDPIO::cout << "Using NORMOP / NORMERR for comparison" << std::endl;
-                        if( invParam.cgnrP ) { quda_inv_param.solve_type = QUDA_NORMOP_SOLVE;}
-                        else { quda_inv_param.solve_type = QUDA_NORMERR_SOLVE;}
-                    }
-                    else{
-                        QDPIO::cout << "Using NORMOP_PC / NORMERR_PC for comparison" << std::endl;
-                        // no need to set this as it is the solve_type requested
-                    }
-
-                    // In_Quda is input to QUDA, Out_Quda is result
-                    multi1d<T> in_quda( this->size() );
-                    multi1d<T> out_quda(this->size() );            
-                    // In_Chroma is input to Chroma, Out_Chroma is result
-                    multi1d<T> in_chroma( this->size() );
-                    multi1d<T> out_chroma(this->size() );
+                // In_Quda is input to QUDA, Out_Quda is result
+                multi1d<T> in_quda( this->size() );
+                multi1d<T> out_quda(this->size() );            
+                // In_Chroma is input to Chroma, Out_Chroma is result
+                multi1d<T> in_chroma( this->size() );
+                multi1d<T> out_chroma(this->size() );
             
-                    for(int s=0; s < this->size(); s++ ) {
-                        //gaussian(in_quda[s]);  // Gaussian into in_quda
+                for(int s=0; s < this->size(); s++ ) {
+                    // POINT SOURCE
+                    if ( POINT_SOURCE ) {
                         in_quda[s] = zero;
                         if ( sub_domain.numSiteTable() == Layout::sitesOnNode() ) {
                             in_quda[s].elem(even.start()).elem(0).elem(0).real() = 1.;
@@ -738,114 +683,133 @@ namespace Chroma
                         else {
                             in_quda[s] = chi[s];
                         }
-                        in_chroma[s] = in_quda[s];   // copy to in_chroma
-                    }            
-                    // used for memcpy to transform data
-                    int parity_offset = (quda_inv_param.Ls / 2) * fermsize;
-                    for(int d=0; d < 2; d++) {
-                        for(int s=0; s < this->size(); s++ ) {
-                            out_quda[s]   = zero;   // zero both out_quda and out_chroma
-                            out_chroma[s] = zero;
-                        }                    
-                        if ( d==0 ) {//Chroma
-                            // Apply A to in_chroma
-                            QDPIO::cout << "Doing Mat" << std::endl;
-                            (*A)(out_chroma, in_chroma, PLUS);
-                        }
-                        else {
-                            QDPIO::cout << "Doing MatDag" << std::endl;
-                            (*A)(out_chroma, in_chroma, MINUS);
-                        }                    
-                        // Copy in_quda into QUDA
-                        REAL* spinorIn  = new REAL[quda_inv_param.Ls*fermsize];
-                        REAL* spinorOut = new REAL[quda_inv_param.Ls*fermsize];
-                        memset((spinorIn),  0, fermsize*quda_inv_param.Ls*sizeof(REAL));
-                        memset((spinorOut), 0, fermsize*quda_inv_param.Ls*sizeof(REAL));
+                    } // GAUSSIAN SOURCE
+                    else {
+                        gaussian(in_quda[s]);  // Gaussian into in_quda
+                    }
+                    in_chroma[s] = in_quda[s];   // copy to in_chroma
+                }
+                // used for memcpy to transform data
+                int start_cb=0;
+                int num_cb=2;
+                int dest_cb;
+                if ( A->subset().start() == rb[1].start() ) {
+                    // A is on ODD Checker Board, so only 1 parity and start at 1
+                    start_cb = 1;
+                    num_cb = 1;
+                }
+
+                for(int d=0; d < 2; d++) {
+                    for(int s=0; s < this->size(); s++ ) {
+                        out_quda[s]   = zero;   // zero both out_quda and out_chroma
+                        out_chroma[s] = zero;
+                    }
+                    // Apply Chroma A
+                    if ( d==0 ) {
+                        QDPIO::cout << "Doing Mat" << std::endl;
+                        (*A)(out_chroma, in_chroma, PLUS);
+                    }
+                    else {
+                        QDPIO::cout << "Doing MatDag" << std::endl;
+                        (*A)(out_chroma, in_chroma, MINUS);
+                    }                    
                     
-                        // HACK TO TEST IN/OUT
-                        // Now compare out_quda and out_chroma
-                        QDPIO::cout << "compare nomr2 of operators BEFORE handing to QUDA" << std::endl;
-                        for(int s=0; s < this->size();s++) {
-                            QDPIO::cout << "QUDA[" <<s << ", rb[0]] = " << norm2(in_quda[s], rb[0])
-                                        << "  QUDA[" <<s << ", rb[1]] = " << norm2(in_quda[s], rb[1])
-                                        << "  Chroma[" <<s << ", rb[0]] = " << norm2(in_chroma[s], rb[0]) 
-                                        << "  Chroma[" <<s << ". rb[1]] = " << norm2(in_chroma[s], rb[1])
+                    REAL* spinorIn  = new REAL[quda_inv_param.Ls*fermsize];
+                    REAL* spinorOut = new REAL[quda_inv_param.Ls*fermsize];
+                    memset((spinorIn),  0, fermsize*quda_inv_param.Ls*sizeof(REAL));
+                    memset((spinorOut), 0, fermsize*quda_inv_param.Ls*sizeof(REAL));
+
+                    // Now compare out_quda and out_chroma
+                        
+                    // test the source to make sure the parity-re-assignment was handled properly
+                    QDPIO::cout << "compare nomr2 of operators BEFORE handing to QUDA" << std::endl;
+                    for(int s=0; s < this->size();s++) {
+                        QDPIO::cout << "QUDA[" <<s << ", rb[0]] = " << norm2(in_quda[s], rb[0])
+                                    << "  QUDA[" <<s << ", rb[1]] = " << norm2(in_quda[s], rb[1])
+                                    << "  Chroma[" <<s << ", rb[0]] = " << norm2(in_chroma[s], rb[0]) 
+                                    << "  Chroma[" <<s << ". rb[1]] = " << norm2(in_chroma[s], rb[1])
+                                    << std::endl;
+                    }
+                    // See .cc file for explanation of this mapping
+                    QDPIO::cout << "Source parity map QUDA <-- Chroma" << std::endl;
+                    dest_cb=0;
+                    for ( int cb=start_cb; cb <= num_cb; cb++) {
+                        if ( cb < 2 ) {// we only want cb=0 and 1 for PREC solution
+                            for ( int s=0; s < quda_inv_param.Ls; s++ ) {
+                                QDPIO::cout << "    QUDA[p=" << dest_cb <<", s=" << s << ", i_sp= " << s+ quda_inv_param.Ls*cb << "]"
+                                            << "   <--   "
+                                            << "Chroma[s=" << s << "][p=" << cb << "]"
+                                            << std::endl;
+                                memcpy(reinterpret_cast<char*>(&spinorIn[ half_fermsize*(s + quda_inv_param.Ls*(dest_cb))]),
+                                       reinterpret_cast<char*>(const_cast<REAL*>(&(in_quda[s].elem(rb[cb].start()).elem(0).elem(0).real()))),
+                                       half_fermsize*sizeof(REAL));
+                            }
+                        }
+                        dest_cb++;
+                    }
+                    // Apply QUDA
+                    if( d==0 ) {
+                        quda_inv_param.dagger = QUDA_DAG_NO;
+                        MatQuda((void *)spinorOut, (void *)spinorIn, (QudaInvertParam*)&quda_inv_param);
+                    }
+                    else {
+                        quda_inv_param.dagger = QUDA_DAG_YES;
+                        MatQuda((void *)spinorOut, (void *)spinorIn, (QudaInvertParam*)&quda_inv_param);
+                    }
+
+                    // see .cc file for explanation of parity mapping
+                    QDPIO::cout << "Solution parity map Chroma <-- QUDA" << std::endl;
+                    //if ( d == 0 ) {
+                    dest_cb = start_cb;
+                    for( int cb=0; cb < num_cb; cb++) {
+                        for( int s=0; s < quda_inv_param.Ls; s++){
+                            QDPIO::cout << "    Chroma[s=" << s << "][p=" << dest_cb << "]"
+                                        << "   <--   "
+                                        << "QUDA[p=" << dest_cb <<", s=" << s << ", i_sp= " << s+ quda_inv_param.Ls*cb << "]"
                                         << std::endl;
+                            memcpy(reinterpret_cast<char*>(const_cast<REAL*>(&(out_quda[s].elem(rb[dest_cb].start()).elem(0).elem(0).real()))),
+                                   reinterpret_cast<char*>(&spinorOut[half_fermsize*(s + quda_inv_param.Ls*cb)]),
+                                   half_fermsize*sizeof(REAL));
                         }
-
-
-                        for(unsigned int s=0; s<quda_inv_param.Ls; s++){
-                            if ( sub_domain.numSiteTable() == Layout::sitesOnNode() ) {
-                                memcpy((&spinorIn[(fermsize / 2) * s]), &(in_quda[s].elem(rb[0].start()).elem(0).elem(0).real()), (fermsize/2)*sizeof(REAL));
-                                memcpy((&spinorIn[parity_offset + (fermsize / 2) * s]), &(in_quda[s].elem(rb[1].start()).elem(0).elem(0).real()), (fermsize/2)*sizeof(REAL));
-                            }
-                            else {
-                                memcpy((&spinorIn[fermsize*s]),&(in_quda[s].elem(start_site).elem(0).elem(0).real()),fermsize*sizeof(REAL));
-                            }
-                        }                    
-                        // Apply QUDA
-                        if( d==0 ) {
-                            quda_inv_param.dagger = QUDA_DAG_NO;
-                            MatQuda((void *)spinorOut, (void *)spinorIn, (QudaInvertParam*)&quda_inv_param);
-                        }
-                        else {
-                            quda_inv_param.dagger = QUDA_DAG_YES;
-                            MatQuda((void *)spinorOut, (void *)spinorIn, (QudaInvertParam*)&quda_inv_param);
-                        }
+                        dest_cb++;
+                    }
                     
-                        for(unsigned int s=0; s<quda_inv_param.Ls; s++){
-                            if ( sub_domain.numSiteTable() == Layout::sitesOnNode() ) {
-                                memcpy((&out_quda[s].elem(rb[0].start()).elem(0).elem(0).real()),(&spinorOut[(fermsize / 2) * s]), (fermsize/2)*sizeof(REAL));
-                                memcpy((&out_quda[s].elem(rb[1].start()).elem(0).elem(0).real()),(&spinorOut[parity_offset + (fermsize / 2) * s]), (fermsize/2)*sizeof(REAL));
-                            }
-                            else {
-                                memcpy((&out_quda[s].elem(start_site).elem(0).elem(0).real()),(&spinorOut[fermsize * s]), fermsize*sizeof(REAL));
-                            }
-                        }
-                        // Now compare out_quda (QUDA) and out_chroma (Chroma)
-                        // QUDA MatQuda does NOT use massRescale which sets kappa for us
-                        //      therefore, we have to 
-                        /*
+                    // declare these in case we do a verbose test
+                    multi1d<int> coord_0(4);
+                    int Nt = QDP::Layout::lattSize()[3];
+                    int mid_t = (int)Nt/2;
+                    coord_0(0) = 0; coord_0(1) = 0; coord_0(2) = 0; coord_0(3) = 0;
+                    multi1d<int> node_0 = Layout::nodeCoord(coord_0);
+                    if ( VERBOSE_TEST ) {
                         QDPIO::cout << "compare nomr2 of operators and color=spin=0 of a few time slices" << std::endl;
-                        // Look at a couple timeslices
-                        multi1d<int> coord_0(4), coord_1(4), coord_mid(4), coord_end(4);
-                        int Nt = QDP::Layout::lattSize()[3];
-                        int mid_t = (int)Nt/2;
-                        coord_0(0) = 0; coord_0(1) = 0; coord_0(2) = 0; coord_0(3) = 0;
-                        coord_1(0) = 1; coord_1(1) = 0; coord_1(2) = 0; coord_1(3) = 0;
-                        coord_mid(0) = 0; coord_mid(1) = 0; coord_mid(2) = 0; coord_mid(3) = mid_t;
-                        coord_end(0) = 0; coord_end(1) = 0; coord_end(2) = 0; coord_end(3) = Nt-1;
-                        multi1d<int> node_0 = Layout::nodeCoord(coord_0);
-                        multi1d<int> node_1 = Layout::nodeCoord(coord_1);
-                        multi1d<int> node_mid = Layout::nodeCoord(coord_mid);
-                        multi1d<int> node_end = Layout::nodeCoord(coord_end);
-                        */
-                        for(int s=0; s < this->size();s++) {
-                            /*
-                            QDPIO::cout << "Checking unormalized vector back from QUDA" << std::endl;
-                            QDPIO::cout << "QUDA[" <<s << ", rb[0]] = " << norm2(out_quda[s], rb[0])
-                                        << "  QUDA[" <<s << ", rb[1]] = " << norm2(out_quda[s], rb[1])
-                                        << "  Chroma[" <<s << ", rb[0]] = " << norm2(out_chroma[s], rb[0]) 
-                                        << "  Chroma[" <<s << ", rb[1]] = " << norm2(out_chroma[s], rb[1])
-                                        << std::endl;
-                            */
-                            // QUDA to Chroma normalization
-                            out_quda[s] *= invTwoKappaB;
-                            // MASS normalization
-                            if ( invParam.massNorm ) {
-                                if ( ! quda_returns_mat ) {
-                                    out_quda[s] *= twoKappaBQuda * twoKappaBQuda;
-                                }
-                                else {
-                                    out_quda[s] *= twoKappaBQuda;
-                                }
+                    }
+                    // Now compare out_quda (QUDA) and out_chroma (Chroma)
+                    // QUDA MatQuda does NOT use massRescale which sets kappa for us
+                    //      therefore, we have to 
+                    for(int s=0; s < this->size();s++) {
+                        // QUDA to Chroma normalization
+                        out_quda[s] *= invTwoKappaB;
+                        // MASS normalization
+                        if ( invParam.massNorm ) {
+                            if ( ! quda_returns_mat ) {
+                                out_quda[s] *= twoKappaBQuda * twoKappaBQuda;
                             }
-                            
-                            QDPIO::cout << "QUDA[" <<s << "] = " << norm2(out_quda[s])
-                                        << "  Chroma[" <<s << "] = " << norm2(out_chroma[s])
-                                        << "  QUDA/Chroma[" <<s << "] = " << norm2(out_quda[s]) / norm2(out_chroma[s])
-                                        <<std::endl;
-                            /*
+                            else {
+                                out_quda[s] *= twoKappaBQuda;
+                            }
+                        }
+
+                        QDPIO::cout <<   "QUDA[" <<s << ", rb[0]] = "   << norm2(out_quda[s], rb[0])
+                                    << "  QUDA[" <<s << ", rb[1]] = "   << norm2(out_quda[s], rb[1])
+                                    << "  Chroma[" <<s << ", rb[0]] = " << norm2(out_chroma[s], rb[0])
+                                    << "  Chroma[" <<s << ", rb[1]] = " << norm2(out_chroma[s], rb[1])
+                                    << std::endl;
+                        QDPIO::cout << "QUDA[" <<s << "] = " << norm2(out_quda[s])
+                                    << "  Chroma[" <<s << "] = " << norm2(out_chroma[s])
+                                    << "  QUDA/Chroma[" <<s << "] = " << norm2(out_quda[s]) / norm2(out_chroma[s])
+                                    <<std::endl;
+
+                        if ( VERBOSE_TEST ) {
                             QDPIO::cout << "L5 X Y Z T s c "<<std::endl;
                             int linearInd;
                             if (Layout::nodeCoord() == node_0) {
@@ -879,22 +843,21 @@ namespace Chroma
                                     }
                                 }
                             }
-                            */
-                        }
+                        } // end VERBOSE_TEST
+                    }
 
-                        delete [] spinorIn;
-                        delete [] spinorOut;
-                    }// D D^dagger loop
-                    //QDPIO::cout << "Exiting after one solve" << std::endl;
-                    //QDP_abort(1);
-                    // Reset quda_inv_param params
-                    quda_inv_param.dagger = QUDA_DAG_NO;
-                    if ( sub_domain.numSiteTable() == Layout::sitesOnNode() ) {
-                        QDPIO::cout << "Restoring NORMOP_PC / NORMERR_PC for solve" << std::endl;
-                        if( invParam.cgnrP ) { quda_inv_param.solve_type = QUDA_NORMOP_PC_SOLVE;}
-                        else { quda_inv_param.solve_type = QUDA_NORMERR_PC_SOLVE;}
-                    }// if NORMOP_PC is used in test, no need to restore as that is what we want
-                }// New test
+                    delete [] spinorIn;
+                    delete [] spinorOut;
+                }// D D^dagger loop
+                //QDPIO::cout << "Exiting after one solve" << std::endl;
+                //QDP_abort(1);
+                // Reset quda_inv_param params
+                quda_inv_param.dagger = QUDA_DAG_NO;
+                if ( sub_domain.numSiteTable() == Layout::sitesOnNode() ) {
+                    QDPIO::cout << "Restoring NORMOP_PC / NORMERR_PC for solve" << std::endl;
+                    if( invParam.cgnrP ) { quda_inv_param.solve_type = QUDA_NORMOP_PC_SOLVE;}
+                    else { quda_inv_param.solve_type = QUDA_NORMERR_PC_SOLVE;}
+                }// if NORMOP_PC is used in test, no need to restore as that is what we want
             }
 #endif
 
@@ -925,55 +888,24 @@ namespace Chroma
             }
             else {
                 QDPIO::cout << "Calling qudaInvert" << std::endl;
-                /*
-                multi1d<T> chi_parity_flip( this->size() );
-                //
-                //  s=0; chi_pflip[0][E]   <-- chi[0][E]
-                //  s=2; chi_pflip[0][O]   <-- chi[1][E]
-                //  s=0; chi_pflip[1][E]   <-- chi[2][E]
-                //  s=2; chi_pflip[1][O]   <-- chi[3][E]
-                //  s=1; chi_pflip[0+2][E] <-- chi[0][O]
-                //  s=3; chi_pflip[0+2][O] <-- chi[1][O]
-                //  s=1; chi_pflip[1+2][E] <-- chi[2][O]
-                //  s=3; chi_pflip[1+2][O] <-- chi[3][O]
-                //
-                for(int s=0; s < this->size(); s++) {
-                    QDPIO::cout << "memcopy chi to chi_parity_flip, s=" << s<< std::endl;
-                    memcpy(&(chi_parity_flip[(s/2)].elem(rb[s%2].start()).elem(0).elem(0).real()),
-                           &(chi[s].elem(rb[0].start()).elem(0).elem(0).real()), (fermsize/2)*sizeof(REAL));
-                    QDPIO::cout << "memcopy chi to chi_parity_flip copy 2, s=" << s<< std::endl;
-                    memcpy(&(chi_parity_flip[(s/2) +(quda_inv_param.Ls/2)].elem(rb[s%2].start()).elem(0).elem(0).real()),
-                           &(chi[s].elem(rb[1].start()).elem(0).elem(0).real()), (fermsize/2)*sizeof(REAL));
-                }
-                */
                 res = qudaInvert(chi, psi);
                 // convert the normalization from QUDA back to Chroma
                 for(int s=0; s < this->size(); s++) {
+                    // overall normalization relevant for KAPPA and MASS normalization
+                    psi[s][sub_domain] *= twoKappaB;
+
                     // MASS normalization
                     if ( invParam.massNorm) {
-                        if ( ! quda_returns_mat ) {// MATPC solve
-                            psi[s][sub_domain] *= invTwoKappaBQuda * invTwoKappaBQuda * twoKappaB;
+                        // MATPC solve
+                        if ( ! quda_returns_mat ) {
+                            psi[s][sub_domain] *= invTwoKappaBQuda * invTwoKappaBQuda;
                         }
-                        else { // MAT solve
-                            psi[s][sub_domain] *= invTwoKappaBQuda * twoKappaB;
+                        // MAT solve
+                        else {
+                            psi[s][sub_domain] *= invTwoKappaBQuda;
                         }
                     }
-                    // KAPPA normalization
-                    else {
-                        // this normalization is for both MAT and MATPC solves
-                        psi[s][sub_domain] *= twoKappaB;
-                    }
                 }
-                /* original hack
-                for(int s=0; s < this->size(); s++) {
-                    QDPIO::cout << "memcopy psi_tmp to psi, s=" << s<< std::endl;
-                    memcpy(&(psi[s].elem(rb[0].start()).elem(0).elem(0).real()),
-                           &(psi_tmp[(s/2)].elem(rb[s % 2].start()).elem(0).elem(0).real()), (fermsize/2)*sizeof(REAL));
-                    QDPIO::cout << "memcopy psi_tmp to psi copy 2, s=" << s<< std::endl;
-                    memcpy(&(psi[s].elem(rb[1].start()).elem(0).elem(0).real()),
-                           &(psi_tmp[(s/2) +(quda_inv_param.Ls/2)].elem(rb[s % 2].start()).elem(0).elem(0).real()), (fermsize/2)*sizeof(REAL));
-                }
-                */
             }
 
             swatch.stop();
@@ -1003,13 +935,13 @@ namespace Chroma
                     if( quda_returns_mat ){
                         if( s == 0 ) {
                             QDPIO::cout << " | r[" << s <<"] | = " << sqrt(r_norm_s)
-                                        << " | b[" << s <<"] | = 0 "
+                                        << " | b[" << s <<"] | = " << sqrt(b_norm_s)
                                         << " |r|/|b|[" <<s<< "] = " << sqrt(r_norm_s)/sqrt(b_norm_s)
                                         << std::endl;
                         }
                         else {
                             QDPIO::cout << " | r[" << s <<"] | = " << sqrt(r_norm_s)
-                                        << " | b[" << s <<"] | = 0 "
+                                        << " | b[" << s <<"] | = " << sqrt(b_norm_s)
                                         << std::endl;                            
                         }
                     }

@@ -42,14 +42,14 @@ namespace Chroma {
             read(paramtop, "MatPCType", MatPCType);
         }
         else {
-            MatPCType = ODD_ODD_ASYM; // change me to ODD_ODD when chroma supports it
+            MatPCType = EVEN_EVEN;
         }
 
         if ( paramtop.count("MatSolutionType") > 0 ) {
             read(paramtop, "MatSolutionType", MatSolutionType);
         }
         else {
-            MatSolutionType = MATPC; // change me to MAT when chroma supports all
+            MatSolutionType = MAT;
         }
 
         if ( paramtop.count("Verbose") > 0 ) {

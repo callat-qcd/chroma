@@ -144,8 +144,8 @@ namespace Chroma
 #ifndef BUILD_QUDA_DEVIFACE_SPINOR
         // If UNPREC solution (num_cb=2) we have to transform the solution from QUDA layout back to Chroma layout
         // QUDA : [parity][s][fermion] --> Chroma : [s][parity][fermion]
-        dest_cb = start_cb;
         QDPIO::cout << "Solution parity map Chroma <-- QUDA" << std::endl;
+        dest_cb = start_cb;
         for( int cb=0; cb < num_cb; cb++) {
             for( int s=0; s < quda_inv_param.Ls; s++){
                 QDPIO::cout << "    Chroma[s=" << s << "][p=" << dest_cb << "]"

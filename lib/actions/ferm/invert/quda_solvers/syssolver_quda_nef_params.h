@@ -36,44 +36,42 @@ namespace Chroma
             InvDeflate      = false;
             checkSolution   = false;
             massNorm        = false;
-            MatPCType       = ODD_ODD_ASYM; // change me to ODD_ODD when supported
-            MatSolutionType = MATPC;        // change me to MAT when supported
         };
 
         SysSolverQUDANEFParams( const SysSolverQUDANEFParams& p) {
-            NEFParams     = p.NEFParams;
-            AntiPeriodicT = p.AntiPeriodicT;
-            MaxIter       = p.MaxIter;
-            RsdTarget     = p.RsdTarget;
-            Delta         = p.Delta;
-            solverType    = p.solverType;
-            verboseP      = p.verboseP;
-            asymmetricP   = p.asymmetricP;
-            cudaPrecision              = p.cudaPrecision;
-            cudaReconstruct            = p.cudaReconstruct;
-            cudaSloppyPrecision        = p.cudaSloppyPrecision;
-            cudaSloppyReconstruct      = p.cudaSloppyReconstruct;
-            cudaPreconditionPrecision  = p.cudaPreconditionPrecision;
-            cudaPreconditionReconstruct= p.cudaPreconditionReconstruct;
-            axialGaugeP        = p.axialGaugeP;
-            SilentFailP        = p.SilentFailP;
-            RsdToleranceFactor = p.RsdToleranceFactor;
-            tuneDslashP        = p.tuneDslashP;
-            innerParamsP       = p.innerParamsP;
-            innerParams        = p.innerParams;
-            backup_invP        = p.backup_invP;
-            backup_inv_param   = p.backup_inv_param;
-            dump_on_failP      = p.dump_on_failP;
-            cgnrP              = p.cgnrP;
-            checkSolution      = p.checkSolution;
-            massNorm           = p.massNorm;
-            MatPCType          = p.MatPCType;
-            MatSolutionType    = p.MatSolutionType;
+            NEFParams                   = p.NEFParams;
+            AntiPeriodicT               = p.AntiPeriodicT;
+            MaxIter                     = p.MaxIter;
+            RsdTarget                   = p.RsdTarget;
+            Delta                       = p.Delta;
+            solverType                  = p.solverType;
+            verboseP                    = p.verboseP;
+            asymmetricP                 = p.asymmetricP;
+            cudaPrecision               = p.cudaPrecision;
+            cudaReconstruct             = p.cudaReconstruct;
+            cudaSloppyPrecision         = p.cudaSloppyPrecision;
+            cudaSloppyReconstruct       = p.cudaSloppyReconstruct;
+            cudaPreconditionPrecision   = p.cudaPreconditionPrecision;
+            cudaPreconditionReconstruct = p.cudaPreconditionReconstruct;
+            axialGaugeP                 = p.axialGaugeP;
+            SilentFailP                 = p.SilentFailP;
+            RsdToleranceFactor          = p.RsdToleranceFactor;
+            tuneDslashP                 = p.tuneDslashP;
+            innerParamsP                = p.innerParamsP;
+            innerParams                 = p.innerParams;
+            backup_invP                 = p.backup_invP;
+            backup_inv_param            = p.backup_inv_param;
+            dump_on_failP               = p.dump_on_failP;
+            cgnrP                       = p.cgnrP;
+            checkSolution               = p.checkSolution;
+            massNorm                    = p.massNorm;
+            MatPCType                   = p.MatPCType;
+            MatSolutionType             = p.MatSolutionType;
             // Do deflation?
             InvDeflate= p.InvDeflate;
             if ( InvDeflate ) {
                 // Lanczos Params
-                NEFLanczosParams = p.NEFLanczosParams;
+                NEFLanczosParams        = p.NEFLanczosParams;
             }
         }
 
@@ -126,8 +124,6 @@ namespace Chroma
 
     void write(XMLWriter& xml, const std::string& path,
                const SysSolverQUDANEFParams& param);
-
-
 
 }
 
