@@ -523,9 +523,18 @@ namespace Chroma
                 default:
                     QDPIO::cerr << "ONLY SR EigSpectrum type accepted at this time" << std::endl;
                 }
-                quda_eig_param.nConv               = invParam.NEFLanczosParams.EigNConv;
-                quda_eig_param.nEv                 = invParam.NEFLanczosParams.EigNEv;
-                quda_eig_param.nKr                 = invParam.NEFLanczosParams.EigNKr;
+                quda_eig_param.n_conv              = invParam.NEFLanczosParams.EigNConv;
+                quda_eig_param.n_ev                = invParam.NEFLanczosParams.EigNEv;
+                if ( invParam.NEFLanczosParams.EigNDeflate ) {
+                    quda_eig_param.n_ev_deflate    = invParam.NEFLanczosParams.EigNDeflate;
+                    if ( invParam.NEFLanczosParams.EigNDeflate == 0 ) {
+                        QDPIO::cout << "WARNING: you set NEFLanczosParams EigNDeflate = 0 - you will not use all your precious Eigenvectors" << std::endl;
+                    }
+                }
+                else {
+                    QDPIO::cout << "WARNING: you did not set NEFLanczosParams EigNDeflate, QUDA will use default = NConv" << std::endl;
+                }
+                quda_eig_param.n_kr                = invParam.NEFLanczosParams.EigNKr;
                 quda_eig_param.tol                 = toDouble(invParam.NEFLanczosParams.EigTol);
                 quda_eig_param.batched_rotate      = invParam.NEFLanczosParams.EigBatchedRotate;
                 quda_eig_param.require_convergence = invParam.NEFLanczosParams.EigRequireConvergence == true

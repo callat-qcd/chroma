@@ -13,6 +13,7 @@ namespace Chroma {
         if ( paramtop.count("EigNEv") > 0 )                { read(paramtop, "EigNEv", EigNEv); }
         if ( paramtop.count("EigNConv") > 0 )              { read(paramtop, "EigNConv", EigNConv); }
         if ( paramtop.count("EigNKr") > 0 )                { read(paramtop, "EigNKr", EigNKr); }
+        if ( paramtop.count("EigNDeflate") > 0 )           { read(paramtop, "EigNDeflate", EigNDeflate); }
         if ( paramtop.count("EigTol") > 0 )                { read(paramtop, "EigTol", EigTol); }
         if ( paramtop.count("EigBatchedRotate") > 0 )      { read(paramtop, "EigBatchedRotate", EigBatchedRotate); }
         if ( paramtop.count("EigMaxRestarts") > 0 )        { read(paramtop, "EigMaxRestarts", EigMaxRestarts); }
@@ -38,6 +39,7 @@ namespace Chroma {
         write(xml, "EigPolyDeg"           , param.EigPolyDeg);
         write(xml, "EigNEv"               , param.EigNEv);
         write(xml, "EigNConv"             , param.EigNConv);
+        write(xml, "EigNDeflate"          , param.EigNDeflate);
         write(xml, "EigNKr"               , param.EigNKr);
         write(xml, "EigTol"               , param.EigTol);
         write(xml, "EigBatchedRotate"     , param.EigBatchedRotate);

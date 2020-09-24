@@ -13,6 +13,7 @@ namespace Chroma
         int  EigPolyDeg;
         int  EigNEv;
         int  EigNConv;
+        int  EigNDeflate;
         int  EigNKr;
         Real EigTol;
         int  EigBatchedRotate;
@@ -30,10 +31,11 @@ namespace Chroma
 
         LanczosParams(XMLReader& in, const std::string& path);
         LanczosParams() {
-            EigAmin               = 0;     //0.1;
+            EigAmin               = 0.;    //0.1;
             EigPolyDeg            = 0;     //100;
             EigNEv                = 0;     //16;
             EigNConv              = 0;     //16;
+            EigNDeflate           = 0;     //default should be NConv
             EigNKr                = 0;     //32;
             EigTol                = 0.;    //1e-6;
             EigBatchedRotate      = 0;     //10;
