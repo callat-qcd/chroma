@@ -110,6 +110,7 @@ namespace Chroma
 				   const std::string& q_mp_id,
 				   int& ncg_had) const
   {
+    QDPIO::cout << "q_mp_id = " << q_mp_id << std::endl;
     if (obsvP && (quarkSpinType == QUARK_SPIN_TYPE_FULL))
       nef_quarkProp4(q_sol, xml_out, q_src, t_src, j_decay, *this, state, invParam, ncg_had, q_mp_id);
     else

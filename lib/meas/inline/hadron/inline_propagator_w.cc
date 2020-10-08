@@ -357,6 +357,7 @@ namespace Chroma
 		       params.param.invParam, 
 		       params.param.quarkSpinType,
 		       params.param.obsvP,
+		       params.param.q_mp_id,
 		       ncg_had);
 	swatch.stop();
 	QDPIO::cout << "Propagator computed: time= " 
