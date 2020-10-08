@@ -107,11 +107,10 @@ namespace Chroma
 				   const GroupXML_t& invParam,
 				   QuarkSpinType quarkSpinType,
 				   bool obsvP,
-				   const std::string& q_mp_id,
 				   int& ncg_had) const
   {
     if (obsvP && (quarkSpinType == QUARK_SPIN_TYPE_FULL))
-      nef_quarkProp4(q_sol, xml_out, q_src, t_src, j_decay, *this, state, invParam, q_mp_id, ncg_had);
+      nef_quarkProp4(q_sol, xml_out, q_src, t_src, j_decay, *this, state, invParam, ncg_had);
     else
     {
       Handle< SystemSolver<LatticeFermion> > qprop(this->qprop(state,invParam));

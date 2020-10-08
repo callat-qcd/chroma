@@ -142,37 +142,6 @@ namespace Chroma
 	quarkProp(q_sol, xml_out, q_src, state, invParam, quarkSpinType, ncg_had);
       }
 
-    //! Given a complete propagator as a source, this does all the inversions needed
-    /*!
-     * Provides a default version
-     *
-     * \param q_sol         quark propagator ( Write )
-     * \param q_src         source ( Read )
-     * \param xml_out       diagnostic output ( Modify )
-     * \param state         gauge connection state ( Read )
-     * \param invParam      inverter parameters ( Read )
-     * \param quarkSpinType compute only a non-relativistic prop ( Read )
-     * \param ncg_had       number of solver iterations ( Write )
-     * \param t_src         time slice of source ( Read )
-     * \param j_decay       direction of decay ( Read )
-     * \param obsvP         compute currents and residual mass ( Read )
-     * \param q_mp_id       NamedObject id to store progapator into if not empty ( Read )
-     * \param ncg_had       number of solver iterations ( Write )
-     */
-    virtual void quarkProp(typename PropTypeTraits<T>::Type_t& q_sol,
-			   XMLWriter& xml_out,
-			   const typename PropTypeTraits<T>::Type_t& q_src,
-			   int t_src, int j_decay,
-			   Handle< FermState<T,P,Q> > state,
-			   const GroupXML_t& invParam,
-			   QuarkSpinType quarkSpinType,
-			   bool obsvP,
-			   const std::string& q_mp_id,
-			   int& ncg_had) const
-      {
-	quarkProp(q_sol, xml_out, q_src, state, invParam, quarkSpinType, ncg_had);
-      }
-
   };
 
 

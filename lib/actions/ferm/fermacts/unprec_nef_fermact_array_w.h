@@ -106,7 +106,6 @@ namespace Chroma
 		   const GroupXML_t& invParam,
 		   QuarkSpinType quarkSpinType,
 		   bool obsvP,
-		   const std::string& q_mp_id,
 		   int& ncg_had) const;
       
   protected:
