@@ -438,6 +438,12 @@ namespace Chroma
       TheNamedObjMap::Instance().get(params.named_obj.prop_id).setFileXML(file_xml);
       TheNamedObjMap::Instance().get(params.named_obj.prop_id).setRecordXML(record_xml);
 
+      // Attach the same info to the midpoint prop if it was written
+      if (!params.param.q_mp_id.empty()) {
+        TheNamedObjMap::Instance().get(params.param.q_mp_id).setFileXML(file_xml);
+        TheNamedObjMap::Instance().get(params.param.q_mp_id).setRecordXML(record_xml);
+      }
+
       QDPIO::cout << "Propagator successfully updated" << std::endl;
     }
     catch (std::bad_cast)
