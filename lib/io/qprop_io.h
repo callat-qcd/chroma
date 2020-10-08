@@ -79,6 +79,7 @@ namespace Chroma
     // String holding XML of the FermionAction section
     GroupXML_t      fermact;          /*!< fermion action */
     bool            obsvP;            /*!< measure any observables (like Z_V, or mresP) on 5D prop */
+    std::string     q_mp_id;          /*!< store midpoint progator in NamedObjectMap if nonempty id */
   
     // String holding XML for auxiliary state information
     GroupXML_t      invParam;         /*!< Inverter parameters */

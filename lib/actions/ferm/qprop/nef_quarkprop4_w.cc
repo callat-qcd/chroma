@@ -117,6 +117,7 @@ namespace Chroma
                          const C<T,P,Q>& S_f,
                          Handle< FermState<T,P,Q> > state,
                          const GroupXML_t& invParam,
+			 const std::string& q_mp_id,
                          int& ncg_had)
     {
         START_CODE();
@@ -129,6 +130,7 @@ namespace Chroma
         Handle< SystemSolverArray<LatticeFermion> > qpropT(S_f.qpropT(state,invParam));
 
         multi1d<LatticePropagator> prop5d(S_f.size()) ;
+
         LatticePropagator q_mp  ;
 
         multi1d<LatticeFermion> psi(S_f.size()) ;
@@ -261,6 +263,14 @@ namespace Chroma
            pop(xml_out);
         **/
 
+	// store midpoint propagator in NamedObjectMap if requested
+	if (!q_mp_id.empty()) {
+	  TheNamedObjMap::Instance().create<LatticePropagator>(q_mp_id);
+	  LatticePropagator& named_q_mp =
+	    TheNamedObjMap::Instance().getData<LatticePropagator>(q_mp_id);
+	  named_q_mp = q_mp;
+	}
+
         //Now the midpoint Pseudoscalar correlator
         multi1d<Double> tmp(length);
         tmp = sumMulti(localNorm2(q_mp), trick.getSet());
@@ -317,6 +327,7 @@ namespace Chroma
                         Handle< FermState<LatticeFermion, 
                         multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> > > state,
                         const GroupXML_t& invParam,
+			const std::string& q_mp_id,
                         int& ncg_had)
     {
         nef_quarkProp_a<LatticeFermion,multi1d<LatticeColorMatrix>,multi1d<LatticeColorMatrix>,
@@ -329,6 +340,7 @@ namespace Chroma
                                                   S_f, 
                                                   state,
                                                   invParam,
+						  q_mp_id,
                                                   ncg_had);
     }
 
@@ -356,6 +368,7 @@ namespace Chroma
                         const GroupXML_t& invParam,
                         int& ncg_had)
     {
+        std::string empty_q_mp_id;
         nef_quarkProp_a<LatticeFermion,multi1d<LatticeColorMatrix>,multi1d<LatticeColorMatrix>,
                         EvenOddPrecDWFermActBaseArray>(
                                                        q_sol, 
@@ -366,6 +379,7 @@ namespace Chroma
                                                        S_f, 
                                                        state,
                                                        invParam,
+						       empty_q_mp_id,
                                                        ncg_had);
     }
 
