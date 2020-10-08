@@ -94,8 +94,6 @@
 #include "util/ferm/transf.h"
 #include "util/ft/sftmom.h"
 
-#include "meas/inline/io/named_objmap.h"
-
 
 namespace Chroma
 {

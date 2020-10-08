@@ -36,23 +36,7 @@ namespace Chroma
 		 Handle< FermState<LatticeFermion,
 		 multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> > > state,
 		 const GroupXML_t& invParam,
-		 const std::string& q_mp_id,
 		 int& ncg_had);
-
-  void
-  nef_quarkProp4(LatticePropagator& q_sol, 
-		 XMLWriter& xml_out,
-		 const LatticePropagator& q_src,
-		 int t_src, int j_decay,
-		 const UnprecDWFermActBaseArray<LatticeFermion,
-		 multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> >& S_f,
-		 Handle< FermState<LatticeFermion,
-		 multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> > > state,
-		 const GroupXML_t& invParam,
-		 int& ncg_had) {
-    std::string empty_q_mp_id;
-    nef_quarkProp4(q_sol, xml_out, q_src, t_src, j_decay, S_f, state, invParam, empty_q_mp_id, ncg_had);
-  }
 
   //! Given a complete propagator as a source, this does all the inversions needed
   /*! \ingroup qprop
