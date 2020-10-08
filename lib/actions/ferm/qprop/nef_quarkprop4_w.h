@@ -36,7 +36,8 @@ namespace Chroma
 		 Handle< FermState<LatticeFermion,
 		 multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> > > state,
 		 const GroupXML_t& invParam,
-		 int& ncg_had);
+		 int& ncg_had,
+		 const std::string& q_mp_id="");
 
   //! Given a complete propagator as a source, this does all the inversions needed
   /*! \ingroup qprop
@@ -60,7 +61,8 @@ namespace Chroma
 		 Handle< FermState<LatticeFermion, 
 		 multi1d<LatticeColorMatrix>, multi1d<LatticeColorMatrix> > > state,
 		 const GroupXML_t& invParam,
-		 int& ncg_had);
+		 int& ncg_had,
+		 const std::string& q_mp_id="");
 
 }
 

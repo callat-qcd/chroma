@@ -331,6 +331,7 @@ namespace Chroma
             }
 
             // GaugeFix
+	    QDPIO::cout << "initial gauge_fix = "<<q_gauge_param.gauge_fix<<std::endl;
             if( invParam.axialGaugeP ) {
                 QDPIO::cout << "Fixing Temporal Gauge" << std::endl;
                 temporalGauge(links_single, GFixMat, Nd-1);
@@ -343,6 +344,7 @@ namespace Chroma
                 // No GaugeFix
                 q_gauge_param.gauge_fix = QUDA_GAUGE_FIXED_NO;  // No Gfix yet
             }
+	    QDPIO::cout << "gauge_fix = "<<q_gauge_param.gauge_fix<<std::endl;
 
             // Don't support anisotorpy for Moebius
             q_gauge_param.anisotropy = 1.0;
@@ -580,7 +582,9 @@ namespace Chroma
 #endif
             }
 
+	    std::cout << "pre-load gauge_fix = "<<q_gauge_param.gauge_fix<<std::endl;
             loadGaugeQuda((void *)gauge, &q_gauge_param);
+	    QDPIO::cout << "done load gauge, gauge_fix = "<<q_gauge_param.gauge_fix<<std::endl;
 
             END_CODE();
         }

@@ -914,6 +914,10 @@ namespace Chroma
       param.invParam = readXMLGroup(paramtop, "InvertParam", "invType");
       read(paramtop, "obsvP", param.obsvP);
 
+      if (paramtop.count("q_mp_id") != 0) {
+	read(paramtop, "q_mp_id", param.q_mp_id);
+      }
+
       if (paramtop.count("boundary") != 0)
       {
 	QDPIO::cerr << "ChromaProp: paranoia check - found a misplaced boundary" << std::endl; 
@@ -1335,6 +1339,7 @@ namespace Chroma
     write(xml, "version", version);
     write(xml, "quarkSpinType", header.quarkSpinType);
     write(xml, "obsvP", header.obsvP);           // new - measured 5D stuff
+    write(xml, "q_mp_id", header.q_mp_id);
     xml << header.fermact.xml;
     xml << header.invParam.xml;
 
